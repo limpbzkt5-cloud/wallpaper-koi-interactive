@@ -167,7 +167,7 @@ $$\mathbf{F}_{\text{steer}} = w_{\text{sep}} \mathbf{F}_{\text{sep}} + w_{\text{
 
 Following feeding completion or interaction, cluster dispersal is modulated by a smooth sinusoidal envelope over duration $T = 6.0\,\text{s}$:
 
-$$I_{\text{scatter}}(\tau) = I_{\text{peak}} \sin(\pi \tau), \quad \tau = \operatorname{clamp}\left(1 - \frac{t_{\text{remaining}}}{T}, 0, 1\right)$$
+$$I_{\text{scatter}}(\tau) = I_{\text{peak}} \sin(\pi \tau), \quad \tau = \text{clamp}\left(1 - \frac{t_{\text{remaining}}}{T}, 0, 1\right)$$
 
 Because $I_{\text{scatter}}(0) = I_{\text{scatter}}(1) = 0$ with $\mathcal{C}^1$ continuity, fish disperse across the pond with zero abrupt heading or velocity discontinuities.
 
@@ -178,7 +178,7 @@ $$\mathbf{n}_{\text{bevel}} = \frac{1}{2} \begin{bmatrix} \alpha(x+1, y) - \alph
 
 Specular rim gleam along curved glass bevel contours is evaluated via Blinn-Phong reflectance:
 
-$$I_{\text{rim}} = \max\left(0, \mathbf{n}_{\text{bevel}} \cdot (-\mathbf{L})\right)^{2.5} \times \operatorname{smoothstep}(0.10, 0.50, \|\mathbf{n}_{\text{bevel}}\|)$$
+$$I_{\text{rim}} = \max\left(0, \mathbf{n}_{\text{bevel}} \cdot (-\mathbf{L})\right)^{2.5} \times \text{smoothstep}\left(0.10, 0.50, \|\mathbf{n}_{\text{bevel}}\|\right)$$
 
 ### 5. Hydrodynamic Stern Wake Plume Geometry
 As the boat cruises with planar velocity $\mathbf{v}(t)$ and lateral normal $\hat{\mathbf{n}}(t)$, trailing wake vertices $\mathbf{r}(t)$ expand behind the stern:
@@ -191,8 +191,8 @@ Wake plume opacity decays under quadratic damping $\alpha(\xi) = \alpha_0 (1 - \
 For any monitor resolution $W_{\text{screen}} \times H_{\text{screen}}$ with aspect ratio $A = W_{\text{screen}} / H_{\text{screen}}$, the pixel-art simulation canvas dynamically sizes as:
 
 $$\begin{cases}
-W_{\text{render}} = \operatorname{round}(H_{\text{base}} \cdot A), \quad H_{\text{render}} = H_{\text{base}} = 270 & \text{if } A \ge 1.0 \text{ (Landscape)} \\
-W_{\text{render}} = H_{\text{base}} = 270, \quad H_{\text{render}} = \operatorname{round}(H_{\text{base}} / A) & \text{if } A < 1.0 \text{ (Portrait)}
+W_{\text{render}} = \text{round}(H_{\text{base}} \cdot A), \quad H_{\text{render}} = H_{\text{base}} = 270 & \text{if } A \ge 1.0 \text{ (Landscape)} \\
+W_{\text{render}} = H_{\text{base}} = 270, \quad H_{\text{render}} = \text{round}(H_{\text{base}} / A) & \text{if } A < 1.0 \text{ (Portrait)}
 \end{cases}$$
 
 The resulting display scale factors satisfy:
