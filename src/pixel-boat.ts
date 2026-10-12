@@ -672,17 +672,17 @@ export class PixelBoat {
       (this.options.position.y - prevPosition.y) / dt,
     );
 
-    // In the Funamori pixel art sprite:
-    // Left side (local X < 0) = Vintage Gramophone = STERN (Đuôi thuyền)
-    // Right side (local X > 0) = Raised prow & sushi tray = BOW (Mũi thuyền)
+    // Swap bowOffset and sternOffset so the wake trail and bow splash swap sides accurately:
+    // When moving left, bow (splash) is on the left (-X), stern (trail) is on the right (+X)
+    // When moving right, bow (splash) is on the right (+X), stern (trail) is on the left (-X)
     const flipX = this.facingLeft ? 1 : -1;
     const sternOffset = vec(
-      -BOAT_BASE_WIDTH * 0.38 * this.options.scale * flipX,
-      9.2 * this.options.scale,
+      BOAT_BASE_WIDTH * 0.40 * this.options.scale * flipX,
+      9.6 * this.options.scale,
     );
     const bowOffset = vec(
-      BOAT_BASE_WIDTH * 0.42 * this.options.scale * flipX,
-      9.8 * this.options.scale,
+      -BOAT_BASE_WIDTH * 0.40 * this.options.scale * flipX,
+      9.6 * this.options.scale,
     );
     const bowPos = add(this.options.position, bowOffset);
     const sternPos = add(this.options.position, sternOffset);
@@ -898,6 +898,14 @@ export class PixelBoat {
       }
     } else {
       this.foodCallNudgeTimer = 0;
+    }
+
+    // Notify school of food pellets status for 5s post-feeding dispersal
+    if (school && typeof (school as School).notifyFoodStatus === "function") {
+      const centerPos = floatingPelletCount > 0
+        ? vec(sumPelletX / floatingPelletCount, sumPelletY / floatingPelletCount)
+        : undefined;
+      (school as School).notifyFoodStatus(floatingPelletCount, centerPos);
     }
 
     // 7. Update weather tint and shadows

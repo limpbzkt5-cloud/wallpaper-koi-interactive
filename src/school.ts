@@ -35,6 +35,14 @@ export class School {
   public count: number = FISH.initialCount;
   public targetActive = false;
 
+  // Post-click and post-feeding dispersal scatter timers
+  public clickScatterCountdown = -1;
+  public foodScatterCountdown = -1;
+  public scatterDecay = 0;
+  public scatterCenter: Vec2 | null = null;
+  private lastFoodPos: Vec2 | null = null;
+  private hadFoodPellets = false;
+
   public readonly maxVisitors = 2;
   public readonly visitorIndices = [MAX_FISH, MAX_FISH + 1];
   public visitorActive: boolean[] = [false, false];
@@ -584,6 +592,7 @@ export class School {
     this.target = { ...point };
     this.targetActive = true;
     this.targetAge = 0;
+    this.clickScatterCountdown = 5.0; // Disperse fish after 5 seconds from click
     const active = this.activeIndices();
     for (const index of active) {
       const fish = this.fish[index];
@@ -605,16 +614,69 @@ export class School {
     this.ripples.trigger("touch", point);
   }
 
-  public scatter(): void {
+  /**
+   * Monitor food status from feeder boat.
+   * Starts a 5.0-second scatter countdown immediately when all food pellets are consumed.
+   */
+  public notifyFoodStatus(floatingCount: number, centerPos?: Vec2): void {
+    if (centerPos) {
+      this.lastFoodPos = { ...centerPos };
+    }
+    if (floatingCount > 0) {
+      this.hadFoodPellets = true;
+      this.foodScatterCountdown = -1; // Reset while food is still being eaten
+    } else if (this.hadFoodPellets) {
+      // All food has just been consumed! Start 5.0s countdown to scatter
+      this.hadFoodPellets = false;
+      this.foodScatterCountdown = 5.0;
+    }
+  }
+
+  /**
+   * Disperse clustered fish radiating outwards across the pond,
+   * breaking up dense gatherings gracefully.
+   */
+  public triggerClusterScatter(center?: Vec2): void {
+    this.targetActive = false;
+    this.scatterDecay = 4.5; // Dispersal forces remain active for 4.5 seconds
+    this.scatterCenter = center ? { ...center } : null;
+
     const active = this.activeIndices();
+    if (active.length === 0) return;
+
+    let clusterCenter = center;
+    if (!clusterCenter) {
+      let sumX = 0;
+      let sumY = 0;
+      for (const idx of active) {
+        sumX += this.fish[idx].position.x;
+        sumY += this.fish[idx].position.y;
+      }
+      clusterCenter = vec(sumX / active.length, sumY / active.length);
+    }
+
     for (const index of active) {
       const fish = this.fish[index];
-      fish.heading += this.random.range(-1.35, 1.35);
-      fish.speed = fish.maximumSpeed;
-      fish.angularVelocity += this.random.range(-2, 2);
-      this.enterState(fish, SwimState.Burst);
+      const fromCenter = sub(fish.position, clusterCenter);
+      const dist = length(fromCenter);
+
+      let scatterHeading: number;
+      if (dist > 1.5) {
+        const baseAngle = Math.atan2(fromCenter.y, fromCenter.x);
+        scatterHeading = baseAngle + this.random.range(-0.55, 0.55);
+      } else {
+        scatterHeading = this.random.range(-Math.PI, Math.PI);
+      }
+
+      fish.heading = scatterHeading;
+      fish.angularVelocity = this.random.range(-1.2, 1.2);
+      fish.speed = fish.maximumSpeed * 0.95;
+      this.enterState(fish, SwimState.Glide);
     }
-    this.targetActive = false;
+  }
+
+  public scatter(): void {
+    this.triggerClusterScatter();
   }
 
   public update(dt: number, time: number, weather?: WeatherPresetId): void {
@@ -625,6 +687,29 @@ export class School {
       this.targetAge > FISH.callResponse.targetLifetimeSeconds
     ) {
       this.targetActive = false;
+    }
+
+    // 5-second automatic dispersal timer after user click
+    if (this.clickScatterCountdown > 0) {
+      this.clickScatterCountdown -= dt;
+      if (this.clickScatterCountdown <= 0) {
+        this.clickScatterCountdown = -1;
+        this.triggerClusterScatter(this.target);
+      }
+    }
+
+    // 5-second automatic dispersal timer after all food pellets are eaten
+    if (this.foodScatterCountdown > 0) {
+      this.foodScatterCountdown -= dt;
+      if (this.foodScatterCountdown <= 0) {
+        this.foodScatterCountdown = -1;
+        this.triggerClusterScatter(this.lastFoodPos ?? undefined);
+      }
+    }
+
+    // Decay the post-cluster dispersal forces smoothly
+    if (this.scatterDecay > 0) {
+      this.scatterDecay = Math.max(0, this.scatterDecay - dt);
     }
 
     this.updateVisitor(dt, this.currentWeather);
@@ -888,6 +973,8 @@ export class School {
       return normalize(add(forward, mul(pivotDirection, 3.2)), forward);
     }
 
+    const scatterIntensity = clamp(this.scatterDecay / 4.5, 0, 1);
+
     if (fish.state === SwimState.Hover) {
       const drift =
         Math.sin(time * 0.45 + fish.wanderSeed) * 0.22 +
@@ -897,7 +984,8 @@ export class School {
       const wander =
         Math.sin(time * 0.55 + fish.wanderSeed) * 0.62 +
         Math.cos(time * 0.23 + fish.wanderSeed * 1.3) * 0.38;
-      steering = add(steering, mul(fromAngle(fish.heading + wander), 0.62));
+      const wanderWeight = 0.62 + 0.85 * scatterIntensity;
+      steering = add(steering, mul(fromAngle(fish.heading + wander), wanderWeight));
     }
 
     let separation = vec();
@@ -944,19 +1032,20 @@ export class School {
         continue;
       }
 
-      // 2. Normal schooling and depth-weighted separation
-      if (distance < 42) {
+      // 2. Normal schooling and depth-weighted separation (dynamically expanded during scatter)
+      const neighbourRadius = 42 + 24 * scatterIntensity;
+      if (distance < neighbourRadius) {
         neighbours += 1;
         cohesion = add(cohesion, otherFish.position);
         alignment = add(alignment, normalize(otherFish.velocity, forward));
 
-        const comfortRadius = 26;
-        const closeRadius = 14;
+        const comfortRadius = 26 + 32 * scatterIntensity;
+        const closeRadius = 14 + 14 * scatterIntensity;
         if (distance < comfortRadius && deltaDepth < 0.22) {
           const depthWeight = Math.pow(Math.max(0, 1 - deltaDepth / 0.22), 2);
           const linearPush = (comfortRadius - distance) / comfortRadius;
           const emergencyPush = closeRadius / Math.max(distance, 2.5);
-          const pushMagnitude = (linearPush + emergencyPush * 0.75) * depthWeight;
+          const pushMagnitude = (linearPush + emergencyPush * 0.75) * depthWeight * (1 + 1.6 * scatterIntensity);
           separation = add(separation, mul(normalize(offset, forward), pushMagnitude));
         }
       }
@@ -965,11 +1054,24 @@ export class School {
     if (neighbours > 0) {
       cohesion = normalize(sub(mul(cohesion, 1 / neighbours), fish.position), forward);
       alignment = normalize(alignment, forward);
-      steering = add(steering, mul(cohesion, 0.22));
-      steering = add(steering, mul(alignment, 0.38));
-      steering = add(steering, mul(separation, 3.2));
+      const cohesionWeight = 0.22 * (1.0 - 0.90 * scatterIntensity);
+      const alignmentWeight = 0.38 * (1.0 - 0.40 * scatterIntensity);
+      const sepWeight = 3.2 + 4.5 * scatterIntensity;
+      steering = add(steering, mul(cohesion, cohesionWeight));
+      steering = add(steering, mul(alignment, alignmentWeight));
+      steering = add(steering, mul(separation, sepWeight));
     } else if (length(separation) > 0.001) {
-      steering = add(steering, mul(separation, 3.2));
+      steering = add(steering, mul(separation, 3.2 + 4.5 * scatterIntensity));
+    }
+
+    // 3. Radial dispersal away from cluster center
+    if (this.scatterCenter && scatterIntensity > 0.01) {
+      const fromCenter = sub(fish.position, this.scatterCenter);
+      const dist = length(fromCenter);
+      if (dist < 160) {
+        const push = (1.0 - dist / 160) * scatterIntensity * 4.2;
+        steering = add(steering, mul(normalize(fromCenter, forward), push));
+      }
     }
 
     if (length(obstacleRepulsion) > 0.001) {
