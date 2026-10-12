@@ -1,0 +1,337 @@
+{
+  "contentrating": "Everyone",
+  "description": "Interactive Procedural Koi Pond with real-time water ripples, responsive fish, changing weather presets, and ambient sound.",
+  "file": "index.html",
+  "general": {
+    "properties": {
+      "koicount": {
+        "condition": "",
+        "fraction": false,
+        "max": 48,
+        "min": 1,
+        "order": 1,
+        "precision": 1,
+        "step": 1,
+        "text": "Koi Count",
+        "type": "slider",
+        "value": 16
+      },
+      "weather": {
+        "condition": "",
+        "options": [
+          {
+            "label": "Sunny",
+            "value": "sunny"
+          },
+          {
+            "label": "Sunset",
+            "value": "sunset"
+          },
+          {
+            "label": "Moonlight",
+            "value": "moonlight"
+          },
+          {
+            "label": "Rain",
+            "value": "rain"
+          },
+          {
+            "label": "Overcast",
+            "value": "overcast"
+          },
+          {
+            "label": "Mist",
+            "value": "mist"
+          },
+          {
+            "label": "Deep Clear",
+            "value": "deep-clear"
+          }
+        ],
+        "order": 2,
+        "text": "Weather Preset",
+        "type": "combo",
+        "value": "sunny"
+      },
+      "rain": {
+        "condition": "",
+        "order": 3,
+        "text": "Rain Ripples",
+        "type": "bool",
+        "value": false
+      },
+      "sound": {
+        "condition": "",
+        "order": 4,
+        "text": "Ambient River Audio",
+        "type": "bool",
+        "value": false
+      },
+      "framerate": {
+        "condition": "",
+        "options": [
+          {
+            "label": "Native (Uncapped)",
+            "value": "native"
+          },
+          {
+            "label": "60 FPS (Smooth)",
+            "value": "60"
+          },
+          {
+            "label": "45 FPS (Balanced)",
+            "value": "45"
+          },
+          {
+            "label": "30 FPS (Power Saver)",
+            "value": "30"
+          }
+        ],
+        "order": 5,
+        "text": "Frame Rate Cap",
+        "type": "combo",
+        "value": "native"
+      },
+      "visitorfrequency": {
+        "condition": "",
+        "options": [
+          {
+            "label": "Balanced (~2 Mins)",
+            "value": "balanced"
+          },
+          {
+            "label": "Often (~1 Min)",
+            "value": "often"
+          },
+          {
+            "label": "Rare (~5 Mins)",
+            "value": "rare"
+          },
+          {
+            "label": "Disabled",
+            "value": "disabled"
+          }
+        ],
+        "order": 6,
+        "text": "Rare Visitor Frequency",
+        "type": "combo",
+        "value": "balanced"
+      },
+      "mutationchance": {
+        "condition": "",
+        "fraction": false,
+        "max": 100,
+        "min": 0,
+        "order": 7,
+        "precision": 1,
+        "step": 5,
+        "text": "Mutation Metamorphosis Rate (%)",
+        "type": "slider",
+        "value": 70
+      },
+      "cycle_interval": {
+        "condition": "",
+        "fraction": false,
+        "max": 10,
+        "min": 1,
+        "order": 8,
+        "precision": 1,
+        "step": 1,
+        "text": "Fish Cycle Interval (Minutes)",
+        "type": "slider",
+        "value": 2
+      },
+      "allow_crimson": {
+        "condition": "",
+        "order": 9,
+        "text": "Allow Crimson Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_bunny": {
+        "condition": "",
+        "order": 10,
+        "text": "Allow Bunny Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_aurora": {
+        "condition": "",
+        "order": 11,
+        "text": "Allow Aurora Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_umbra": {
+        "condition": "",
+        "order": 12,
+        "text": "Allow Umbra Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_midas": {
+        "condition": "",
+        "order": 13,
+        "text": "Allow Midas Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_electric": {
+        "condition": "",
+        "order": 14,
+        "text": "Allow Electric Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_frozen": {
+        "condition": "",
+        "order": 15,
+        "text": "Allow Frozen Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_nuclear": {
+        "condition": "",
+        "order": 16,
+        "text": "Allow Nuclear Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_mythical": {
+        "condition": "",
+        "order": 17,
+        "text": "Allow Mythical Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_rainbow_cluster": {
+        "condition": "",
+        "order": 18,
+        "text": "Allow Rainbow Cluster Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_ishmael": {
+        "condition": "",
+        "order": 19,
+        "text": "Allow Ishmael Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_serene": {
+        "condition": "",
+        "order": 20,
+        "text": "Allow Serene Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "allow_astraeus": {
+        "condition": "",
+        "order": 21,
+        "text": "Allow Astraeus Mutation",
+        "type": "bool",
+        "value": true
+      },
+      "clock_enabled": {
+        "condition": "",
+        "order": 22,
+        "text": "Display Pond Clock",
+        "type": "bool",
+        "value": true
+      },
+      "clock_mode": {
+        "condition": "clock_enabled.value === true",
+        "options": [
+          {
+            "label": "Submerged (Underwater Refraction)",
+            "value": "submerged"
+          },
+          {
+            "label": "Floating (Crisp Surface HUD)",
+            "value": "floating"
+          },
+          {
+            "label": "Off (Disabled)",
+            "value": "off"
+          }
+        ],
+        "order": 23,
+        "text": "Clock Style",
+        "type": "combo",
+        "value": "submerged"
+      },
+      "clock_format": {
+        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
+        "options": [
+          {
+            "label": "24-Hour",
+            "value": "24h"
+          },
+          {
+            "label": "12-Hour (AM/PM)",
+            "value": "12h"
+          }
+        ],
+        "order": 24,
+        "text": "Clock Time Format",
+        "type": "combo",
+        "value": "24h"
+      },
+      "clock_seconds": {
+        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
+        "order": 25,
+        "text": "Show Seconds",
+        "type": "bool",
+        "value": false
+      },
+      "clock_opacity": {
+        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
+        "fraction": false,
+        "max": 100,
+        "min": 10,
+        "order": 26,
+        "precision": 1,
+        "step": 2,
+        "text": "Clock Opacity (%)",
+        "type": "slider",
+        "value": 42
+      },
+      "clock_position": {
+        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
+        "options": [
+          {
+            "label": "Center of Pond",
+            "value": "center"
+          },
+          {
+            "label": "Top Right",
+            "value": "top-right"
+          },
+          {
+            "label": "Top Left",
+            "value": "top-left"
+          },
+          {
+            "label": "Bottom Center",
+            "value": "bottom-center"
+          }
+        ],
+        "order": 27,
+        "text": "Clock Position",
+        "type": "combo",
+        "value": "center"
+      }
+    },
+    "supportproperties": true
+  },
+  "preview": "preview.png",
+  "tags": [
+    "Nature",
+    "Relaxing",
+    "Interactive"
+  ],
+  "title": "Interactive Koi Pond",
+  "type": "web",
+  "version": 1,
+  "visibility": "public"
+}
