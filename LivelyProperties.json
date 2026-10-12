@@ -1,0 +1,197 @@
+{
+  "koicount": {
+    "type": "slider",
+    "value": 16,
+    "min": 1,
+    "max": 48,
+    "step": 1,
+    "tick": 48,
+    "text": "Koi Count"
+  },
+  "weather": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Weather Preset",
+    "items": [
+      "Sunny",
+      "Sunset",
+      "Moonlight",
+      "Rain",
+      "Overcast",
+      "Mist",
+      "Deep Clear"
+    ]
+  },
+  "rain": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Rain Ripples"
+  },
+  "sound": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Ambient River Audio"
+  },
+  "framerate": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Frame Rate Cap",
+    "items": [
+      "Native (Uncapped)",
+      "60 FPS (Smooth)",
+      "45 FPS (Balanced)",
+      "30 FPS (Power Saver)"
+    ]
+  },
+  "visitorfrequency": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Rare Visitor Frequency",
+    "items": [
+      "Balanced (~2 Mins)",
+      "Often (~1 Min)",
+      "Rare (~5 Mins)",
+      "Disabled"
+    ]
+  },
+  "mutationchance": {
+    "type": "slider",
+    "value": 70,
+    "min": 0,
+    "max": 100,
+    "step": 5,
+    "tick": 20,
+    "text": "Mutation Metamorphosis Rate (%)"
+  },
+  "cycle_interval": {
+    "type": "slider",
+    "value": 2,
+    "min": 1,
+    "max": 10,
+    "step": 1,
+    "tick": 10,
+    "text": "Fish Cycle Interval (Minutes)"
+  },
+  "allow_crimson": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Crimson Mutation"
+  },
+  "allow_bunny": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Bunny Mutation"
+  },
+  "allow_aurora": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Aurora Mutation"
+  },
+  "allow_umbra": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Umbra Mutation"
+  },
+  "allow_midas": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Midas Mutation"
+  },
+  "allow_electric": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Electric Mutation"
+  },
+  "allow_frozen": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Frozen Mutation"
+  },
+  "allow_nuclear": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Nuclear Mutation"
+  },
+  "allow_mythical": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Mythical Mutation"
+  },
+  "allow_rainbow_cluster": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Rainbow Cluster Mutation"
+  },
+  "allow_ishmael": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Ishmael Mutation"
+  },
+  "allow_serene": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Serene Mutation"
+  },
+  "allow_astraeus": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Astraeus Mutation"
+  },
+  "clock_enabled": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Display Pond Clock"
+  },
+  "clock_mode": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Clock Style",
+    "items": [
+      "Submerged (Underwater Refraction)",
+      "Floating (Crisp Surface HUD)",
+      "Off (Disabled)"
+    ]
+  },
+  "clock_format": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Clock Time Format",
+    "items": [
+      "24-Hour",
+      "12-Hour (AM/PM)"
+    ]
+  },
+  "clock_seconds": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Show Seconds"
+  },
+  "clock_opacity": {
+    "type": "slider",
+    "value": 42,
+    "min": 10,
+    "max": 100,
+    "step": 2,
+    "tick": 20,
+    "text": "Clock Opacity (%)"
+  },
+  "clock_position": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Clock Position",
+    "items": [
+      "Center of Pond",
+      "Top Right",
+      "Top Left",
+      "Bottom Center"
+    ]
+  },
+  "scatter": {
+    "type": "button",
+    "text": "Scatter Koi"
+  },
+  "reset": {
+    "type": "button",
+    "text": "Reset Pond"
+  }
+}
