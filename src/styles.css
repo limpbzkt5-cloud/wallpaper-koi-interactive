@@ -163,10 +163,12 @@ input[type="color"] {
 }
 
 .stage {
-  display: grid;
+  display: block;
   width: 100vw;
+  height: 100vh;
   height: 100dvh;
-  place-items: center;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
   background: #09090b;
 }
@@ -182,15 +184,16 @@ input[type="color"] {
 
 .pond-shell {
   position: relative;
-  width: min(100vw, calc(100dvh * 16 / 9));
-  height: min(100dvh, calc(100vw * 9 / 16));
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 .display {
   position: relative;
   width: 100%;
   height: 100%;
-  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #09090b;
   box-shadow: none;
@@ -1069,7 +1072,8 @@ canvas#pond {
 @media (max-width: 700px), (pointer: coarse) {
   .pond-shell {
     display: flex;
-    width: min(100vw, calc((100dvh - 7.25rem) * 16 / 9));
+    width: 100%;
+    height: 100%;
     flex-direction: column;
   }
 
@@ -1140,7 +1144,8 @@ canvas#pond {
 
   .stage--ambient .pond-shell {
     display: block;
-    width: min(100vw, calc(100dvh * 16 / 9));
+    width: 100%;
+    height: 100%;
   }
 
   .stage--ambient .pond-ui {

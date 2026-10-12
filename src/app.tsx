@@ -102,20 +102,23 @@ function parseTargetMutation(val: any): FishMutation {
 
 function pondRenderSize(display: HTMLElement): { width: number; height: number } {
   const { width, height } = display.getBoundingClientRect();
-  const portrait =
-    window.matchMedia("(max-width: 700px) and (orientation: portrait)").matches &&
-    width > 0 &&
-    height > 0;
-  if (!portrait) return { width: CANVAS.width, height: CANVAS.height };
+  const screenW = width > 0 ? width : (typeof window !== "undefined" && window.innerWidth > 0 ? window.innerWidth : CANVAS.width);
+  const screenH = height > 0 ? height : (typeof window !== "undefined" && window.innerHeight > 0 ? window.innerHeight : CANVAS.height);
+  const aspect = screenW / Math.max(1, screenH);
 
-  const renderWidth = Math.min(
-    CANVAS.width,
-    Math.max(CANVAS.height, Math.round(width * 0.7)),
-  );
-  return {
-    width: renderWidth,
-    height: Math.max(CANVAS.height, Math.round((renderWidth * height) / width)),
-  };
+  if (aspect >= 1.0) {
+    // Landscape screens (16:9, 16:10, 21:9, 3:2, 4:3, etc.):
+    // Maintain standard 270px vertical pixel-art density, scaling horizontal resolution to match screen aspect ratio exactly.
+    const baseHeight = CANVAS.height; // 270
+    const renderWidth = Math.max(1, Math.round(baseHeight * aspect));
+    return { width: renderWidth, height: baseHeight };
+  } else {
+    // Portrait screens (9:16 mobile, vertical monitor, etc.):
+    // Maintain standard 270px horizontal pixel-art density, scaling vertical resolution to match screen aspect ratio.
+    const baseWidth = CANVAS.height; // 270
+    const renderHeight = Math.max(1, Math.round(baseWidth / aspect));
+    return { width: baseWidth, height: renderHeight };
+  }
 }
 
 function isEditableTarget(target: EventTarget | null): boolean {
