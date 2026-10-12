@@ -3,7 +3,7 @@
 
 An ethereal, interactive 3D koi pond designed as a living desktop wallpaper. Powered by procedural animation, hydrodynamic wave physics, dynamic caustics, diurnal weather presets, and realistic fish biomechanics with zero video loops.
 
-[![Vitest](https://img.shields.io/badge/Vitest-74%2F74%20Passing-brightgreen.svg)]()
+[![Vitest](https://img.shields.io/badge/Vitest-78%2F78%20Passing-brightgreen.svg)]()
 [![Three.js](https://img.shields.io/badge/Three.js-r186-blue.svg)]()
 [![Wallpaper Engine](https://img.shields.io/badge/Wallpaper%20Engine-Compatible-orange.svg)]()
 [![Lively Wallpaper](https://img.shields.io/badge/Lively%20Wallpaper-Compatible-cyan.svg)]()
@@ -12,12 +12,33 @@ An ethereal, interactive 3D koi pond designed as a living desktop wallpaper. Pow
 
 ## 🚀 Quick Installation Guide
 
-### Option 1: Lively Wallpaper (1-Click Package)
-1. Download [`NagomiKoi.livelypack`](./NagomiKoi.livelypack) from this repository.
-2. Open **Lively Wallpaper** on your PC.
-3. Simply **drag and drop** `NagomiKoi.livelypack` into the Lively Wallpaper window, or click **Add Wallpaper** ➔ browse to `NagomiKoi.livelypack`.
-4. Click **OK** to set it as your active wallpaper!
-> *Tip:* If developing locally, you can also double-click [`Sync-Lively-Wallpaper.bat`](./Sync-Lively-Wallpaper.bat) to build and deploy directly into Lively's active library.
+### Option 1: Lively Wallpaper (Free & Open Source)
+
+#### Step 1: Install Wallpaper
+- **Method A (Drag & Drop Package)**:
+  1. Download [`NagomiKoi.livelypack`](./NagomiKoi.livelypack) from the repository root.
+  2. Open **Lively Wallpaper**.
+  3. Simply **drag and drop** `NagomiKoi.livelypack` directly into the Lively window, or click **Add Wallpaper (+)** ➔ **Browse** ➔ select `NagomiKoi.livelypack`.
+  4. Click **OK** to set it as your active desktop wallpaper!
+- **Method B (Local Developer Sync)**:
+  - Double-click [`Sync-Lively-Wallpaper.bat`](./Sync-Lively-Wallpaper.bat) or run `npm run sync:lively`. This compiles the project and links it directly into your active Lively library.
+
+#### Step 2: Customizing Settings in Lively
+1. In Lively Wallpaper, find **Nagomi Koi** in your library.
+2. Click the three dots `...` (or right-click) ➔ Select **Customise Wallpaper**.
+3. All properties are organized logically with instant real-time preview:
+   - **Weather Preset**: Choose between *Sunny*, *Sunset*, *Moonlight*, *Rain*, *Overcast*, *Mist*, or *Deep Clear*.
+   - **Apple Liquid Glass Clock**: Toggle on/off, choose *Submerged* (underwater refraction beneath fish) or *Floating* (crisp surface HUD), switch between *24-Hour* and *12-Hour (AM/PM)*, toggle seconds counter, and adjust opacity.
+   - **Interactive Actions**: Click **Scatter Koi** to trigger a ripple panic wave, or **Reset Pond** to re-seed school mutations.
+   - **Ambient River Audio**: Check the audio toggle to listen to a soothing natural stream loop.
+   - **Performance / FPS Cap**: Select *60 FPS*, *45 FPS*, or *30 FPS* to save laptop battery and GPU cycles.
+   - **13 Mythic Mutations**: Fine-tune metamorphosis probabilities or toggle specific mutations (Astraeus, Serene, Umbra, Aurora, Midas, Frozen, etc.).
+4. Hover over any property title to view detailed **help tooltips** explaining what each setting does!
+
+#### Step 3: Lively Wallpaper Tips & Best Practices
+- **Mouse Interaction**: Make sure **Lively Settings ➔ Wallpaper ➔ Input ➔ Mouse Interaction** is set to *Enabled* to interact with water ripples, glide lotus leaves, and feed koi.
+- **Audio Playback**: If audio is silent after checking *Ambient River Audio*, ensure **Lively Settings ➔ Audio ➔ Volume** is turned up.
+- **Auto-Pause while Gaming**: Lively Wallpaper automatically pauses GPU rendering to 0% usage whenever a game or full-screen app is running.
 
 ---
 
