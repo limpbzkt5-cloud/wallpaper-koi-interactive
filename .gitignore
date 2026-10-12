@@ -1,0 +1,26 @@
+# Dependencies and generated output
+node_modules/
+dist/
+.vite/
+coverage/
+context/
+
+# Local environment and operating-system files
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+
+# This project uses npm and package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+.claude
+
+# Standalone desktop scratch files (wallpaper edition focus)
+electron/
+native/
+release/
+Start-Nagomi-Desktop.bat
+Build-And-Package.bat

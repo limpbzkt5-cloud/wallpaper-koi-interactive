@@ -1,0 +1,13 @@
+{
+  "AppVersion": "2.0.7.4",
+  "Title": "Interactive Koi Pond",
+  "Thumbnail": "thumbnail.png",
+  "Preview": "thumbnail.png",
+  "Desc": "Procedurally animated interactive koi pond with real-time water ripples, responsive fish, changing weather presets, and ambient sound.",
+  "Author": "",
+  "License": "",
+  "Contact": "",
+  "Type": 1,
+  "Arguments": "--audio --pause-event true",
+  "FileName": "index.html"
+}
