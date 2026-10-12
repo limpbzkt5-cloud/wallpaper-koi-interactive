@@ -672,15 +672,17 @@ export class PixelBoat {
       (this.options.position.y - prevPosition.y) / dt,
     );
 
-    // Compute bow and stern positions for wake trail emitters
+    // In the Funamori pixel art sprite:
+    // Left side (local X < 0) = Vintage Gramophone = STERN (Đuôi thuyền)
+    // Right side (local X > 0) = Raised prow & sushi tray = BOW (Mũi thuyền)
     const flipX = this.facingLeft ? 1 : -1;
-    const bowOffset = vec(
-      -BOAT_BASE_WIDTH * 0.42 * this.options.scale * flipX,
-      6.0 * this.options.scale,
-    );
     const sternOffset = vec(
-      BOAT_BASE_WIDTH * 0.38 * this.options.scale * flipX,
-      6.0 * this.options.scale,
+      -BOAT_BASE_WIDTH * 0.38 * this.options.scale * flipX,
+      7.0 * this.options.scale,
+    );
+    const bowOffset = vec(
+      BOAT_BASE_WIDTH * 0.42 * this.options.scale * flipX,
+      7.0 * this.options.scale,
     );
     const bowPos = add(this.options.position, bowOffset);
     const sternPos = add(this.options.position, sternOffset);

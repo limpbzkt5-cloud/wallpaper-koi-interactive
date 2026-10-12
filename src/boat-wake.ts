@@ -52,7 +52,6 @@ export class BoatWakeTrail {
   private readonly foamParticles: FoamParticle[] = [];
 
   private lastEmitPos: Vec2 | null = null;
-  private bowSplashAccumulator = 0;
   private sternBubbleAccumulator = 0;
 
   // Pre-allocated flat buffers for dynamic GPU streaming
@@ -124,7 +123,7 @@ export class BoatWakeTrail {
   public update(
     dt: number,
     _boatPos: Vec2,
-    bowPos: Vec2,
+    _bowPos: Vec2,
     sternPos: Vec2,
     velocity: Vec2,
     scale: number,
@@ -176,45 +175,25 @@ export class BoatWakeTrail {
       }
 
       // 2. Spawn Trailing Stern Foam Bubbles
-      this.sternBubbleAccumulator += dt * Math.min(currentSpeed * 0.8, 24.0);
+      this.sternBubbleAccumulator += dt * Math.min(currentSpeed * 0.7, 18.0);
       while (this.sternBubbleAccumulator >= 1.0) {
         this.sternBubbleAccumulator -= 1.0;
         if (this.foamParticles.length >= MAX_FOAM_PARTICLES) {
           this.foamParticles.shift();
         }
 
-        const sternSpeed = (1.5 + Math.random() * 3.0) * scale;
-        const sideOffset = (Math.random() - 0.5) * (4.5 * scale);
+        const sternSpeed = (1.2 + Math.random() * 2.5) * scale;
+        const sideOffset = (Math.random() - 0.5) * (3.8 * scale);
 
         this.foamParticles.push({
           x: sternPos.x + norm.x * sideOffset,
           y: sternPos.y + norm.y * sideOffset,
-          vx: -fwd.x * sternSpeed + (Math.random() - 0.5) * 1.5,
-          vy: -fwd.y * sternSpeed + (Math.random() - 0.5) * 1.5,
-          size: (2.2 + Math.random() * 2.5) * scale,
+          vx: -fwd.x * sternSpeed + (Math.random() - 0.5) * 1.0,
+          vy: -fwd.y * sternSpeed + (Math.random() - 0.5) * 1.0,
+          size: (1.8 + Math.random() * 2.0) * scale,
           age: 0,
           maxAge: 1.0 + Math.random() * 0.5,
           isStern: true,
-        });
-      }
-
-      // 3. Spawn Subtle Bow Froth (gentle prow contact with water)
-      this.bowSplashAccumulator += dt * Math.min(currentSpeed * 0.4, 12.0);
-      while (this.bowSplashAccumulator >= 1.0) {
-        this.bowSplashAccumulator -= 1.0;
-        if (this.foamParticles.length >= MAX_FOAM_PARTICLES) {
-          this.foamParticles.shift();
-        }
-
-        this.foamParticles.push({
-          x: bowPos.x + (Math.random() - 0.5) * (2.5 * scale),
-          y: bowPos.y + (Math.random() - 0.5) * (2.5 * scale),
-          vx: fwd.x * (currentSpeed * 0.15) + (Math.random() - 0.5) * 2.0,
-          vy: fwd.y * (currentSpeed * 0.15) + (Math.random() - 0.5) * 2.0,
-          size: (1.8 + Math.random() * 1.8) * scale,
-          age: 0,
-          maxAge: 0.30 + Math.random() * 0.15,
-          isStern: false,
         });
       }
     } else {
@@ -324,9 +303,9 @@ export class BoatWakeTrail {
         const halfWidthA = (3.8 + 2.8 * Math.pow(tA, 0.5)) * (1.0 - 0.22 * tA) * nA.scale;
         const halfWidthB = (3.8 + 2.8 * Math.pow(tB, 0.5)) * (1.0 - 0.22 * tB) * nB.scale;
 
-        // Opacity curve: solid, beautiful trail right behind the vessel, gently fading towards tail
-        const alphaA = clamp(Math.sin(Math.pow(tA, 0.75) * Math.PI) * 1.25, 0, 1) * (1.0 - Math.pow(tA, 1.6)) * 0.90;
-        const alphaB = clamp(Math.sin(Math.pow(tB, 0.75) * Math.PI) * 1.25, 0, 1) * (1.0 - Math.pow(tB, 1.6)) * 0.90;
+        // Opacity curve: begins smoothly right at the stern, fading gracefully into the pond wake
+        const alphaA = clamp(1.0 - tA, 0, 1) * (1.0 - Math.pow(tA, 1.8)) * 0.78;
+        const alphaB = clamp(1.0 - tB, 0, 1) * (1.0 - Math.pow(tB, 1.8)) * 0.78;
 
         if (alphaA <= 0.01 && alphaB <= 0.01) continue;
 
