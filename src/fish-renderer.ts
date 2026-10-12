@@ -538,11 +538,11 @@ export class FishRenderer {
     this.renderer.autoClear = false;
     this.renderer.render(this.bedScene, this.camera);
     this.renderer.render(this.shadowScene, this.camera);
-    this.renderer.render(this.fishShadowScene, this.camera);
-    this.renderer.render(this.fishScene, this.camera);
     if (this.pondClock.options.enabled && this.pondClock.options.mode === "submerged") {
       this.renderer.render(this.underwaterClockScene, this.camera);
     }
+    this.renderer.render(this.fishShadowScene, this.camera);
+    this.renderer.render(this.fishScene, this.camera);
     this.renderer.autoClear = true;
     this.renderer.setRenderTarget(this.compositeTarget);
     this.renderer.clear();

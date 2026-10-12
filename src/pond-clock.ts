@@ -54,6 +54,7 @@ const clockFragmentShader = /* glsl */ `
   uniform vec2 uClockSize;
   uniform vec4 uRipples[MAX_CLOCK_RIPPLES];
   uniform int uRippleCount;
+  uniform float uTickAge;
 
   varying vec2 vUv;
   varying vec2 vWorldPos;
@@ -81,48 +82,135 @@ const clockFragmentShader = /* glsl */ `
       rippleOffset += radialDir * waveBand * 0.0025;
     }
 
-    vec2 finalUv = clamp(vUv + flowOffset + rippleOffset, vec2(0.001), vec2(0.999));
-    vec4 texColor = texture2D(uTexture, finalUv);
+    // 3. Micro-ripple dispersion radiating from center upon clock tick (Idea 5)
+    if (uTickAge >= 0.0 && uTickAge < 1.4) {
+      vec2 tickDelta = vWorldPos - uClockPos;
+      float tickDist = length(tickDelta);
+      float tickRadius = 8.0 + uTickAge * 72.0;
+      float tickDiff = (tickDist - tickRadius) / 10.0;
+      float tickWave = exp(-(tickDiff * tickDiff)) * (1.0 - uTickAge / 1.4);
+      vec2 tickDir = tickDelta / max(tickDist, 0.1);
+      rippleOffset += tickDir * tickWave * 0.0022;
+    }
 
+    vec2 baseUv = clamp(vUv + flowOffset + rippleOffset, vec2(0.002), vec2(0.998));
+
+    // 4. Apple Liquid Glass: Surface Normal & Edge Specular Bevel
+    float du = 1.0 / 1024.0;
+    float dv = 1.0 / 512.0;
+    float aR = texture2D(uTexture, baseUv + vec2(du * 3.0, 0.0)).a;
+    float aL = texture2D(uTexture, baseUv - vec2(du * 3.0, 0.0)).a;
+    float aU = texture2D(uTexture, baseUv + vec2(0.0, dv * 3.0)).a;
+    float aD = texture2D(uTexture, baseUv - vec2(0.0, dv * 3.0)).a;
+    vec2 edgeNormal = vec2(aR - aL, aU - aD);
+    float edgeDist = length(edgeNormal);
+
+    vec4 texColor = texture2D(uTexture, baseUv);
     if (texColor.a <= 0.005) {
       discard;
     }
 
-    // 3. Dynamic traveling caustic light ribbon network
+    // 5. Dynamic traveling caustic light ribbon network
     float c1 = sin(vWorldPos.x * 0.075 + vWorldPos.y * 0.048 + uTime * 2.10);
     float c2 = cos(vWorldPos.x * 0.058 - vWorldPos.y * 0.065 - uTime * 1.75);
     float c3 = sin((vWorldPos.x + vWorldPos.y) * 0.110 - uTime * 2.50);
     float causticIntensity = pow(clamp(0.5 + 0.5 * (c1 * c2 + c3), 0.0, 1.0), 3.0);
 
-    // Highlight glyph core while preserving drop shadow contrast
+    // 6. Apple Liquid Glass Bevel & Specular Highlights
+    // Curved liquid glass cross-section: light from top-left casts crisp specular gleam on bevel rim
+    vec2 lightDir = normalize(vec2(-0.45, -0.80));
+    vec2 normDir = edgeDist > 0.005 ? normalize(edgeNormal) : vec2(0.0);
+    float rimLight = clamp(dot(normDir, -lightDir), 0.0, 1.0);
+    float specularRim = pow(rimLight, 2.5) * smoothstep(0.10, 0.50, edgeDist);
+    float edgeGleam = smoothstep(0.15, 0.60, edgeDist) * 0.35;
+
+    // Pure, luminous frosted white liquid glass material
+    vec3 frostedWhite = vec3(1.0, 1.0, 1.0);
+    vec3 glassTint = mix(frostedWhite, uCausticColor, 0.15);
+    vec3 outColor = mix(texColor.rgb, glassTint, 0.30);
+
+    // Caustic sunlight shimmering through glass core
     float glyphCore = smoothstep(0.35, 0.85, texColor.a);
-    vec3 outColor = texColor.rgb + uCausticColor * (causticIntensity * 0.42 * glyphCore);
+    outColor += uCausticColor * (causticIntensity * 0.32 * glyphCore);
 
-    // Subtle edge rim shimmer
-    float edgeGlow = (1.0 - smoothstep(0.15, 0.70, texColor.a)) * 0.20 * glyphCore;
-    outColor += uCausticColor * edgeGlow;
+    // Glossy liquid glass specular rim (bright white liquid edge)
+    outColor += vec3(1.0) * (specularRim * 0.85 + edgeGleam * 0.45);
 
-    gl_FragColor = vec4(outColor, texColor.a * uOpacity);
+    // Translucent liquid glass alpha with glossy edge emphasis
+    float glassAlpha = clamp(texColor.a * (0.85 + specularRim * 0.25), 0.0, 1.0) * uOpacity;
+    gl_FragColor = vec4(outColor, glassAlpha);
   }
 `;
 
+interface ClockThemePalette {
+  mainColor: string;
+  accentColor: string;
+  shadowColor: string;
+  shadowBlur: number;
+  causticColor: THREE.Color;
+}
+
+const THEME_PALETTES: Record<WeatherPresetId, ClockThemePalette> = {
+  sunny: {
+    // Pure sunlit frosted liquid glass on clear water
+    mainColor: "rgba(255, 255, 255, 0.96)",
+    accentColor: "rgba(255, 255, 255, 0.80)",
+    shadowColor: "rgba(0, 24, 16, 0.35)",
+    shadowBlur: 22,
+    causticColor: new THREE.Color(0.96, 1.0, 0.95),
+  },
+  "deep-clear": {
+    // Crystalline liquid ice glass over deep pond bed
+    mainColor: "rgba(255, 255, 255, 0.96)",
+    accentColor: "rgba(225, 248, 255, 0.82)",
+    shadowColor: "rgba(0, 16, 28, 0.42)",
+    shadowBlur: 24,
+    causticColor: new THREE.Color(0.70, 0.92, 1.0),
+  },
+  sunset: {
+    // Warm golden-hour liquid glass catching sunset glow
+    mainColor: "rgba(255, 252, 246, 0.96)",
+    accentColor: "rgba(255, 232, 205, 0.85)",
+    shadowColor: "rgba(48, 16, 10, 0.38)",
+    shadowBlur: 22,
+    causticColor: new THREE.Color(1.0, 0.88, 0.72),
+  },
+  moonlight: {
+    // Luminous lunar liquid glass under moonlit night
+    mainColor: "rgba(242, 252, 255, 0.96)",
+    accentColor: "rgba(180, 238, 255, 0.85)",
+    shadowColor: "rgba(0, 28, 48, 0.48)",
+    shadowBlur: 26,
+    causticColor: new THREE.Color(0.65, 0.95, 0.99),
+  },
+  mist: {
+    // Soft frosted morning mist liquid glass
+    mainColor: "rgba(255, 255, 255, 0.94)",
+    accentColor: "rgba(230, 240, 248, 0.78)",
+    shadowColor: "rgba(20, 30, 42, 0.30)",
+    shadowBlur: 18,
+    causticColor: new THREE.Color(0.88, 0.93, 0.97),
+  },
+  overcast: {
+    // Smooth pearl liquid glass on overcast day
+    mainColor: "rgba(255, 255, 255, 0.94)",
+    accentColor: "rgba(225, 235, 240, 0.78)",
+    shadowColor: "rgba(15, 25, 30, 0.32)",
+    shadowBlur: 18,
+    causticColor: new THREE.Color(0.85, 0.90, 0.92),
+  },
+  rain: {
+    // Fresh rain-slicked crystal liquid glass
+    mainColor: "rgba(255, 255, 255, 0.95)",
+    accentColor: "rgba(210, 238, 255, 0.82)",
+    shadowColor: "rgba(10, 25, 40, 0.36)",
+    shadowBlur: 20,
+    causticColor: new THREE.Color(0.80, 0.90, 1.0),
+  },
+};
+
 function getCausticColorForWeather(weather: WeatherPresetId): THREE.Color {
-  switch (weather) {
-    case "moonlight":
-      return new THREE.Color(0.65, 0.95, 0.99);
-    case "sunset":
-      return new THREE.Color(1.0, 0.88, 0.72);
-    case "mist":
-    case "overcast":
-      return new THREE.Color(0.88, 0.92, 0.96);
-    case "rain":
-      return new THREE.Color(0.82, 0.90, 1.0);
-    case "deep-clear":
-      return new THREE.Color(0.70, 0.92, 1.0);
-    case "sunny":
-    default:
-      return new THREE.Color(0.95, 0.98, 1.0);
-  }
+  return (THEME_PALETTES[weather] ?? THEME_PALETTES.sunny).causticColor;
 }
 
 function createOffscreenCanvas(width: number, height: number): {
@@ -164,6 +252,8 @@ export class PondClock {
 
   private lastRenderedKey = "";
   private lastWeatherId: WeatherPresetId | null = null;
+  private lastSecond = -1;
+  private lastTickTime = -999;
 
   public constructor(options: Partial<ClockOptions> = {}) {
     this.options = { ...DEFAULT_CLOCK_OPTIONS, ...options };
@@ -197,6 +287,7 @@ export class PondClock {
         uClockSize: { value: new THREE.Vector2(planeW, planeH) },
         uRipples: { value: this.ripplesUniform },
         uRippleCount: { value: 0 },
+        uTickAge: { value: 999 },
       },
       vertexShader: clockVertexShader,
       fragmentShader: clockFragmentShader,
@@ -301,6 +392,15 @@ export class PondClock {
 
     this.material.uniforms.uTime.value = time;
 
+    // Track second/minute tick for micro-ripple wave pulse (Idea 5)
+    const currentSec = now.getSeconds();
+    if (currentSec !== this.lastSecond) {
+      this.lastSecond = currentSec;
+      this.lastTickTime = time;
+    }
+    const tickAge = time >= this.lastTickTime ? time - this.lastTickTime : 999;
+    this.material.uniforms.uTickAge.value = tickAge;
+
     // Synchronize active water ripple wave packets
     if (ripples && ripples.instances) {
       let activeCount = 0;
@@ -323,7 +423,7 @@ export class PondClock {
 
     // Cache key to minimize canvas redraws (redraws once per second or minute)
     const timeSec = this.options.showSeconds ? now.getSeconds() : 0;
-    const cacheKey = `${now.getHours()}:${now.getMinutes()}:${timeSec}:${weather}:${this.options.format}:${this.options.showSeconds}`;
+    const cacheKey = `${now.toDateString()}:${now.getHours()}:${now.getMinutes()}:${timeSec}:${weather}:${this.options.format}:${this.options.showSeconds}`;
 
     if (cacheKey === this.lastRenderedKey && weather === this.lastWeatherId) {
       return;
@@ -355,31 +455,9 @@ export class PondClock {
     const hourStr = this.options.format === "12h" ? hours.toString() : hours.toString().padStart(2, "0");
     const mainTime = `${hourStr}:${minutes}`;
 
-    // Dynamic optical color adaptation based on active weather preset
-    let mainColor = "rgba(255, 255, 255, 0.95)";
-    let accentColor = "rgba(255, 255, 255, 0.75)";
-    let shadowColor = "rgba(0, 0, 0, 0.38)";
-    let shadowBlur = 20;
-
-    if (weather === "moonlight") {
-      // Ethereal bioluminescent soft cyan-white glow for night
-      mainColor = "rgba(224, 242, 254, 0.96)";
-      accentColor = "rgba(186, 230, 253, 0.82)";
-      shadowColor = "rgba(14, 165, 233, 0.45)";
-      shadowBlur = 28;
-    } else if (weather === "sunset") {
-      // Warm golden dusk glow
-      mainColor = "rgba(255, 247, 237, 0.96)";
-      accentColor = "rgba(254, 215, 170, 0.82)";
-      shadowColor = "rgba(234, 88, 12, 0.35)";
-      shadowBlur = 22;
-    } else if (weather === "mist" || weather === "overcast") {
-      // Soft monochromatic pearl
-      mainColor = "rgba(248, 250, 252, 0.92)";
-      accentColor = "rgba(203, 213, 225, 0.75)";
-      shadowColor = "rgba(15, 23, 42, 0.38)";
-      shadowBlur = 18;
-    }
+    // Theme palette lookup for the active weather preset
+    const theme = THEME_PALETTES[weather] ?? THEME_PALETTES.sunny;
+    const { mainColor, accentColor, shadowColor, shadowBlur } = theme;
 
     const centerX = w * 0.5;
     const centerY = h * 0.5;
@@ -394,8 +472,10 @@ export class PondClock {
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 4;
 
-    // Main Time Digits: Scaled x1.5 (220px), ultra-clean modern typography
-    ctx.font = '200 220px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    // Modern Apple-inspired typography stack: clean, elegant, frosted-glass aesthetic
+    const FONT_FAMILY =
+      '"SF Pro Display", "SF Pro", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif';
+    ctx.font = `500 215px ${FONT_FAMILY}`;
     ctx.fillStyle = mainColor;
 
     if (this.options.showSeconds || this.options.format === "12h") {
@@ -407,7 +487,7 @@ export class PondClock {
 
       // Trailing auxiliary badge (Seconds or AM/PM)
       ctx.textAlign = "left";
-      ctx.font = '300 58px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.font = `500 56px ${FONT_FAMILY}`;
       ctx.fillStyle = accentColor;
       ctx.shadowBlur = shadowBlur * 0.6;
 
