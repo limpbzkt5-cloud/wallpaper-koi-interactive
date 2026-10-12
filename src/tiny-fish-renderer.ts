@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { TINY_FISH } from "./config";
 import { add, mul, normalize, perpendicular, type Vec2 } from "./math";
 import { SurfaceGeometryBatch } from "./surface-geometry";
-import { TinyFishSchools, type TinyFishAgent } from "./tiny-fish";
+import { TinyFishSchools, type TinyFishAgent, TinyFishSpecies } from "./tiny-fish";
 
 interface TinyFishPalette {
   body: THREE.Color;
@@ -21,6 +21,44 @@ const PALETTES: readonly TinyFishPalette[] = TINY_FISH.palettes.map(
     eye: new THREE.Color(palette.eye),
   }),
 );
+
+const SPECIES_PALETTES: Record<TinyFishSpecies, TinyFishPalette> = {
+  [TinyFishSpecies.Medaka]: {
+    body: new THREE.Color(0xf6d365),
+    light: new THREE.Color(0xfff5cc),
+    accent: new THREE.Color(0xe67e22),
+    fin: new THREE.Color(0xfad390),
+    eye: new THREE.Color(0x2d3436),
+  },
+  [TinyFishSpecies.NeonDanio]: {
+    body: new THREE.Color(0x2e59ba),
+    light: new THREE.Color(0x54a0ff),
+    accent: new THREE.Color(0x00d2d3),
+    fin: new THREE.Color(0x48dbfb),
+    eye: new THREE.Color(0x130f40),
+  },
+  [TinyFishSpecies.RosyBitterling]: {
+    body: new THREE.Color(0xf78fb3),
+    light: new THREE.Color(0xf8a5c2),
+    accent: new THREE.Color(0xf5cd79),
+    fin: new THREE.Color(0xfc5c65),
+    eye: new THREE.Color(0x303952),
+  },
+  [TinyFishSpecies.GhostMinnow]: {
+    body: new THREE.Color(0xdfe4ea),
+    light: new THREE.Color(0xf1f2f6),
+    accent: new THREE.Color(0xa4b0be),
+    fin: new THREE.Color(0xced6e0),
+    eye: new THREE.Color(0x2f3542),
+  },
+  [TinyFishSpecies.EmeraldRasbora]: {
+    body: new THREE.Color(0x20bf6b),
+    light: new THREE.Color(0x26de81),
+    accent: new THREE.Color(0xf7b731),
+    fin: new THREE.Color(0xfa8231),
+    eye: new THREE.Color(0x1e272e),
+  },
+};
 
 export class TinyFishRenderer {
   public readonly shadowGroup = new THREE.Group();
@@ -110,7 +148,7 @@ export class TinyFishRenderer {
   }
 
   private drawFish(fish: TinyFishAgent): void {
-    const palette = PALETTES[fish.palette % PALETTES.length];
+    const palette = SPECIES_PALETTES[fish.species] ?? PALETTES[fish.palette % PALETTES.length];
     const forward = normalize(fish.velocity);
     const side = perpendicular(forward);
     const shadowCenter = add(fish.position, TINY_FISH.shadow.offset);
@@ -131,6 +169,12 @@ export class TinyFishRenderer {
       palette,
     );
 
+    const finReach = fish.species === TinyFishSpecies.RosyBitterling
+      ? TINY_FISH.finReachScale * 1.15
+      : fish.species === TinyFishSpecies.GhostMinnow
+        ? TINY_FISH.finReachScale * 0.85
+        : TINY_FISH.finReachScale;
+
     const finRootForward = add(
       fish.position,
       mul(forward, fish.bodyLength * 0.02),
@@ -142,7 +186,7 @@ export class TinyFishRenderer {
     for (const direction of [-1, 1]) {
       const finTip = add(
         finRootForward,
-        mul(side, fish.bodyWidth * TINY_FISH.finReachScale * direction),
+        mul(side, fish.bodyWidth * finReach * direction),
       );
       this.shapeBatch.triangle(
         finRootForward,
@@ -152,27 +196,54 @@ export class TinyFishRenderer {
       );
     }
 
-    const stripeFront = add(
-      fish.position,
-      mul(forward, fish.bodyLength * 0.08),
-    );
-    const stripeBack = add(
-      fish.position,
-      mul(forward, -fish.bodyLength * 0.09),
-    );
-    const stripeWidth = fish.bodyWidth * 0.78;
-    this.detailBatch.triangle(
-      add(stripeFront, mul(side, stripeWidth)),
-      add(stripeFront, mul(side, -stripeWidth)),
-      add(stripeBack, mul(side, -stripeWidth)),
-      palette.accent,
-    );
-    this.detailBatch.triangle(
-      add(stripeFront, mul(side, stripeWidth)),
-      add(stripeBack, mul(side, -stripeWidth)),
-      add(stripeBack, mul(side, stripeWidth)),
-      palette.accent,
-    );
+    if (fish.species === TinyFishSpecies.NeonDanio) {
+      // Radiant iridescent dorsal spine streak
+      const streakStart = add(fish.position, mul(forward, fish.bodyLength * 0.28));
+      const streakEnd = add(fish.position, mul(forward, -fish.bodyLength * 0.30));
+      const streakHalfWidth = fish.bodyWidth * 0.36;
+      this.detailBatch.triangle(
+        add(streakStart, mul(side, streakHalfWidth)),
+        add(streakStart, mul(side, -streakHalfWidth)),
+        add(streakEnd, mul(side, -streakHalfWidth)),
+        palette.accent,
+      );
+      this.detailBatch.triangle(
+        add(streakStart, mul(side, streakHalfWidth)),
+        add(streakEnd, mul(side, -streakHalfWidth)),
+        add(streakEnd, mul(side, streakHalfWidth)),
+        palette.accent,
+      );
+    } else if (fish.species === TinyFishSpecies.GhostMinnow) {
+      // Ethereal silver visceral pearl
+      this.detailBatch.circle(
+        add(fish.position, mul(forward, fish.bodyLength * 0.05)),
+        Math.max(0.2, fish.bodyWidth * 0.32),
+        palette.accent,
+        4,
+      );
+    } else {
+      const stripeFront = add(
+        fish.position,
+        mul(forward, fish.bodyLength * 0.08),
+      );
+      const stripeBack = add(
+        fish.position,
+        mul(forward, -fish.bodyLength * 0.09),
+      );
+      const stripeWidth = fish.bodyWidth * 0.78;
+      this.detailBatch.triangle(
+        add(stripeFront, mul(side, stripeWidth)),
+        add(stripeFront, mul(side, -stripeWidth)),
+        add(stripeBack, mul(side, -stripeWidth)),
+        palette.accent,
+      );
+      this.detailBatch.triangle(
+        add(stripeFront, mul(side, stripeWidth)),
+        add(stripeBack, mul(side, -stripeWidth)),
+        add(stripeBack, mul(side, stripeWidth)),
+        palette.accent,
+      );
+    }
 
     const eyeForward = add(
       fish.position,
@@ -230,14 +301,28 @@ export class TinyFishRenderer {
       mul(side, tailSwing),
     );
     const tailHalfWidth = fish.bodyWidth * TINY_FISH.tailWidthScale;
-    const upper = add(tailCenter, mul(side, tailHalfWidth));
-    const lower = add(tailCenter, mul(side, -tailHalfWidth));
-    const notch = add(
-      add(tailRoot, mul(forward, -tailLength * 0.62)),
-      mul(side, tailSwing * 0.44),
-    );
     const tailColor = palette?.fin;
-    batch.triangle(tailRoot, upper, notch, tailColor);
-    batch.triangle(tailRoot, notch, lower, tailColor);
+
+    if (fish.species === TinyFishSpecies.RosyBitterling) {
+      // Forked caudal fin (đuôi chẻ hai nhánh sắc nét chữ V)
+      const forkDepth = tailLength * 0.52;
+      const upperTip = add(tailCenter, mul(side, tailHalfWidth * 1.35));
+      const lowerTip = add(tailCenter, mul(side, -tailHalfWidth * 1.35));
+      const forkCrotch = add(
+        add(tailRoot, mul(forward, -tailLength + forkDepth)),
+        mul(side, tailSwing * 0.45),
+      );
+      batch.triangle(tailRoot, upperTip, forkCrotch, tailColor);
+      batch.triangle(tailRoot, forkCrotch, lowerTip, tailColor);
+    } else {
+      const upper = add(tailCenter, mul(side, tailHalfWidth));
+      const lower = add(tailCenter, mul(side, -tailHalfWidth));
+      const notch = add(
+        add(tailRoot, mul(forward, -tailLength * 0.62)),
+        mul(side, tailSwing * 0.44),
+      );
+      batch.triangle(tailRoot, upper, notch, tailColor);
+      batch.triangle(tailRoot, notch, lower, tailColor);
+    }
   }
 }

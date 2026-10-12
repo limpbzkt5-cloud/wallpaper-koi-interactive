@@ -136,6 +136,17 @@ interface LotusFlowerMesh {
   geometry: THREE.BufferGeometry;
 }
 
+interface LeafDynamicState {
+  bob: number;
+  bobVel: number;
+  tilt: number;
+  tiltVel: number;
+  pushX: number;
+  pushY: number;
+  pushVelX: number;
+  pushVelY: number;
+}
+
 export class LotusLeavesPass {
   public readonly shadowGroup = new THREE.Group();
   public readonly group = new THREE.Group();
@@ -176,6 +187,8 @@ export class LotusLeavesPass {
   private flowers: LotusFlowerMesh[] = [];
   // Per-frame scratch: animated center of each built leaf.
   private leafCenters: Point[] = [];
+  private readonly leafDynamics: LeafDynamicState[] = [];
+  private lastUpdateTime = -1;
 
   public constructor() {
     this.refreshConfig();
@@ -205,7 +218,7 @@ export class LotusLeavesPass {
     this.rebuild();
   }
 
-  public update(time: number): void {
+  public update(time: number, ripples?: any): void {
     if (
       LOTUS_LEAVES.length !== this.leaves.length ||
       LOTUS_FLOWERS.length !== this.flowers.length
@@ -213,9 +226,26 @@ export class LotusLeavesPass {
       this.rebuild();
     }
 
+    const dt = this.lastUpdateTime >= 0
+      ? Math.min(0.05, Math.max(0.001, time - this.lastUpdateTime))
+      : 0.016;
+    this.lastUpdateTime = time;
+
     const visibleLeafCount = LOTUS.visibleLeafCount;
     const visibleFlowerCount = LOTUS.visibleFlowerCount;
     const shadowOffset = LOTUS.shadow.offset;
+
+    // Damped harmonic oscillator constants
+    const kBob = 52.0;
+    const cBob = 5.8;
+    const kTilt = 60.0;
+    const cTilt = 7.0;
+    const kPush = 28.0;
+    const cPush = 6.2;
+
+    const rippleInstances = ripples
+      ? ("instances" in ripples ? ripples.instances : ripples)
+      : null;
 
     for (const [leafIndex, mesh] of this.leaves.entries()) {
       const visible = leafIndex < visibleLeafCount;
@@ -224,30 +254,110 @@ export class LotusLeavesPass {
       if (!visible) continue;
 
       const leaf = LOTUS_LEAVES[leafIndex];
+      const dyn = this.leafDynamics[leafIndex] ?? {
+        bob: 0,
+        bobVel: 0,
+        tilt: 0,
+        tiltVel: 0,
+        pushX: 0,
+        pushY: 0,
+        pushVelX: 0,
+        pushVelY: 0,
+      };
+
+      let bobAcc = -kBob * dyn.bob - cBob * dyn.bobVel;
+      let tiltAcc = -kTilt * dyn.tilt - cTilt * dyn.tiltVel;
+      let pushAccX = -kPush * dyn.pushX - cPush * dyn.pushVelX;
+      let pushAccY = -kPush * dyn.pushY - cPush * dyn.pushVelY;
+
       const placement = viewportPoint(leaf.x, leaf.y);
-      const centerX =
+      const leafRadius = leaf.radius * LOTUS.radiusScale;
+      const currentCenterX = placement.x + dyn.pushX;
+      const currentCenterY = placement.y + dyn.pushY;
+
+      if (rippleInstances && Array.isArray(rippleInstances)) {
+        for (let i = 0; i < rippleInstances.length; i++) {
+          const rip = rippleInstances[i];
+          if (!rip || !rip.alive || rip.age < 0) continue;
+
+          // Compute ripple wavefront propagation
+          const startRadius = rip.type === "touch" ? 4 : rip.type === "mouth" ? 1.2 : 0.8;
+          const expansionSpeed = rip.type === "touch" ? 62 : rip.type === "mouth" ? 17 : 30;
+          const lifetime = rip.type === "touch" ? 2.2 : rip.type === "mouth" ? 0.9 : 1.25;
+
+          const waveRadius = startRadius + expansionSpeed * rip.age;
+          const dx = currentCenterX - rip.center.x;
+          const dy = currentCenterY - rip.center.y;
+          const dist = Math.hypot(dx, dy);
+
+          const waveBand = 26.0;
+          const distToWavefront = Math.abs(dist - waveRadius);
+
+          if (distToWavefront < leafRadius + waveBand && rip.age < lifetime) {
+            const waveProximity = Math.exp(-Math.pow(distToWavefront / waveBand, 2));
+            const lifeRemaining = Math.max(0, 1 - rip.age / lifetime);
+            const typeWeight = rip.type === "touch" ? 1.6 : rip.type === "mouth" ? 0.8 : 0.4;
+            const waveForce = rip.strength * waveProximity * lifeRemaining * typeWeight;
+
+            if (waveForce > 0.008) {
+              bobAcc += waveForce * 125.0;
+
+              const safeDist = Math.max(dist, 1.0);
+              const nx = dx / safeDist;
+              const ny = dy / safeDist;
+
+              pushAccX += nx * waveForce * 28.0;
+              pushAccY += ny * waveForce * 28.0;
+
+              const torque = (nx * 0.75 - ny * 0.65) * waveForce * 16.0;
+              tiltAcc += torque;
+            }
+          }
+        }
+      }
+
+      // Semi-implicit Euler integration
+      dyn.bobVel += bobAcc * dt;
+      dyn.bob = Math.max(0, Math.min(1.4, dyn.bob + dyn.bobVel * dt));
+
+      dyn.tiltVel += tiltAcc * dt;
+      dyn.tilt = Math.max(-0.35, Math.min(0.35, dyn.tilt + dyn.tiltVel * dt));
+
+      dyn.pushVelX += pushAccX * dt;
+      dyn.pushVelY += pushAccY * dt;
+      dyn.pushX = Math.max(-20, Math.min(20, dyn.pushX + dyn.pushVelX * dt));
+      dyn.pushY = Math.max(-20, Math.min(20, dyn.pushY + dyn.pushVelY * dt));
+
+      const baseCenterX =
         placement.x + Math.sin(time * 0.12 + leaf.phase) * LOTUS.driftX;
-      const centerY =
+      const baseCenterY =
         placement.y +
         Math.cos(time * 0.15 + leaf.phase * 1.3) * LOTUS.driftY;
-      const sway =
+      const baseSway =
         Math.sin(time * 0.085 + leaf.phase) * LOTUS.rotationAmount;
-      const pulse = 1 + Math.sin(time * 0.11 + leaf.phase) * 0.012;
+      const basePulse = 1 + Math.sin(time * 0.11 + leaf.phase) * 0.012;
+
+      const finalCenterX = baseCenterX + dyn.pushX;
+      const finalCenterY = baseCenterY + dyn.pushY;
+      const finalSway = baseSway + dyn.tilt;
+      const finalScale = basePulse * (1 + dyn.bob * 0.18);
 
       const center = this.leafCenters[leafIndex];
-      center.x = centerX;
-      center.y = centerY;
+      center.x = finalCenterX;
+      center.y = finalCenterY;
 
-      mesh.group.position.set(centerX, centerY, 0);
-      mesh.group.rotation.z = sway;
-      mesh.group.scale.setScalar(pulse);
+      mesh.group.position.set(finalCenterX, finalCenterY, 0);
+      mesh.group.rotation.z = finalSway;
+      mesh.group.scale.setScalar(finalScale);
+
+      const shadowLift = 1 + dyn.bob * 0.85;
       mesh.shadowMesh.position.set(
-        centerX + shadowOffset.x,
-        centerY + shadowOffset.y,
+        finalCenterX + shadowOffset.x * shadowLift,
+        finalCenterY + shadowOffset.y * shadowLift,
         0,
       );
-      mesh.shadowMesh.rotation.z = sway;
-      mesh.shadowMesh.scale.setScalar(pulse * 1.02);
+      mesh.shadowMesh.rotation.z = finalSway;
+      mesh.shadowMesh.scale.setScalar(finalScale * 1.02);
     }
 
     for (const [flowerIndex, mesh] of this.flowers.entries()) {
@@ -261,13 +371,17 @@ export class LotusLeavesPass {
       mesh.mesh.visible = visible;
       if (!visible) continue;
 
+      const dyn = this.leafDynamics[flower.leafIndex];
       const center = this.leafCenters[flower.leafIndex];
       mesh.mesh.position.set(
         center.x + flower.offsetX,
         center.y + flower.offsetY,
         0,
       );
-      mesh.mesh.rotation.z = Math.sin(time * 0.12 + leaf.phase) * 0.04;
+      const flowerScale = 1 + (dyn ? dyn.bob * 0.16 : 0);
+      mesh.mesh.scale.setScalar(flowerScale);
+      mesh.mesh.rotation.z =
+        Math.sin(time * 0.12 + leaf.phase) * 0.04 + (dyn ? dyn.tilt * 0.75 : 0);
     }
   }
 
@@ -320,6 +434,18 @@ export class LotusLeavesPass {
     }
     this.leaves = leaves;
     this.leafCenters = leaves.map(() => ({ x: 0, y: 0 }));
+    while (this.leafDynamics.length < leaves.length) {
+      this.leafDynamics.push({
+        bob: 0,
+        bobVel: 0,
+        tilt: 0,
+        tiltVel: 0,
+        pushX: 0,
+        pushY: 0,
+        pushVelX: 0,
+        pushVelY: 0,
+      });
+    }
 
     const flowers: LotusFlowerMesh[] = [];
     for (const [flowerIndex, flower] of LOTUS_FLOWERS.entries()) {

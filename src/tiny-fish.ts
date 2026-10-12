@@ -21,6 +21,22 @@ import {
   XorShift32,
 } from "./math";
 
+export enum TinyFishSpecies {
+  Medaka = "medaka",              // Japanese Golden Medaka (Ricefish) - sleek golden/amber, rounded fan tail
+  NeonDanio = "neon-danio",        // Neon Blue Danio - fast slender wave cruiser with luminous spine
+  RosyBitterling = "bitterling",   // Rosy Bitterling - deeper diamond body, forked caudal tail, pastel rose
+  GhostMinnow = "ghost-minnow",    // Glass/Ghost Minnow - delicate ethereal translucent silvery body
+  EmeraldRasbora = "rasbora",      // Emerald Jade Rasbora - rich moss-green with warm orange fin tips
+}
+
+export const SPECIES_BY_SCHOOL: readonly TinyFishSpecies[] = [
+  TinyFishSpecies.Medaka,
+  TinyFishSpecies.NeonDanio,
+  TinyFishSpecies.RosyBitterling,
+  TinyFishSpecies.EmeraldRasbora,
+  TinyFishSpecies.GhostMinnow,
+];
+
 export interface TinyFishAgent {
   position: Vec2;
   velocity: Vec2;
@@ -34,6 +50,7 @@ export interface TinyFishAgent {
   fleeDelay: number;
   fleeTime: number;
   fleeDuration: number;
+  species: TinyFishSpecies;
 }
 
 interface TinySchoolRange {
@@ -62,6 +79,41 @@ export class TinyFishSchools {
     for (const [schoolIndex, setting] of TINY_FISH_SCHOOLS.entries()) {
       const start = this.fish.length;
       const placement = viewportPoint(setting.x, setting.y);
+      const species = SPECIES_BY_SCHOOL[schoolIndex % SPECIES_BY_SCHOOL.length];
+
+      // Species-specific morphological tuning while keeping fish ambient and small (< 8.5px)
+      let speciesLengthMult = 1.0;
+      let speciesWidthRatioMult = 1.0;
+      let speciesSpeedMult = 1.0;
+
+      switch (species) {
+        case TinyFishSpecies.Medaka:
+          speciesLengthMult = 0.95;
+          speciesWidthRatioMult = 0.90;
+          speciesSpeedMult = 0.98;
+          break;
+        case TinyFishSpecies.NeonDanio:
+          speciesLengthMult = 1.05;
+          speciesWidthRatioMult = 0.78;
+          speciesSpeedMult = 1.14;
+          break;
+        case TinyFishSpecies.RosyBitterling:
+          speciesLengthMult = 0.88;
+          speciesWidthRatioMult = 1.28;
+          speciesSpeedMult = 0.92;
+          break;
+        case TinyFishSpecies.GhostMinnow:
+          speciesLengthMult = 0.82;
+          speciesWidthRatioMult = 0.84;
+          speciesSpeedMult = 0.88;
+          break;
+        case TinyFishSpecies.EmeraldRasbora:
+          speciesLengthMult = 0.92;
+          speciesWidthRatioMult = 1.05;
+          speciesSpeedMult = 1.02;
+          break;
+      }
+
       for (let index = 0; index < setting.count; index += 1) {
         const angle = this.random.range(0, Math.PI * 2);
         const radius = Math.sqrt(this.random.unit());
@@ -72,10 +124,12 @@ export class TinyFishSchools {
         const heading = setting.heading + this.random.range(-0.34, 0.34);
         const bodyLength =
           this.random.range(TINY_FISH.bodyLength[0], TINY_FISH.bodyLength[1]) *
-          setting.sizeScale;
+          setting.sizeScale *
+          speciesLengthMult;
         const cruiseSpeed =
           this.random.range(TINY_FISH.cruiseSpeed[0], TINY_FISH.cruiseSpeed[1]) *
-          setting.speedScale;
+          setting.speedScale *
+          speciesSpeedMult;
         this.fish.push({
           position,
           velocity: mul(fromAngle(heading), cruiseSpeed),
@@ -85,7 +139,8 @@ export class TinyFishSchools {
             this.random.range(
               TINY_FISH.bodyWidthRatio[0],
               TINY_FISH.bodyWidthRatio[1],
-            ),
+            ) *
+            speciesWidthRatioMult,
           tailPhase: this.random.range(0, Math.PI * 2),
           phase: this.random.range(0, Math.PI * 2),
           palette: setting.palette,
@@ -94,6 +149,7 @@ export class TinyFishSchools {
           fleeDelay: -1,
           fleeTime: 0,
           fleeDuration: TINY_FISH.flee.duration[0],
+          species,
         });
       }
       this.ranges.push({
@@ -125,6 +181,7 @@ export class TinyFishSchools {
         next.fleeDelay = old.fleeDelay;
         next.fleeTime = old.fleeTime;
         next.fleeDuration = old.fleeDuration;
+        next.species = old.species ?? next.species;
       }
     }
   }

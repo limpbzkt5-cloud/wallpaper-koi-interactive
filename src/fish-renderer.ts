@@ -528,7 +528,7 @@ export class FishRenderer {
     );
     this.waterSurface.update(school, time);
     this.duckweed.update(time, school.ripples);
-    this.lotusLeaves.update(time);
+    this.lotusLeaves.update(time, school.ripples);
     this.butterflies.update(time);
 
     this.pondClock.update(new Date(), this.activeWeatherId, time, school.ripples);
