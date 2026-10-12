@@ -353,8 +353,16 @@ export function App() {
       }
     };
 
+    const isWallpaperEngine = typeof (window as any).wallpaperPropertyListener !== "undefined";
+    const isLively = typeof (window as any).livelyPropertyListener !== "undefined";
+    const isDesktopWallpaper = isWallpaperEngine || isLively || typeof window.electronAPI !== "undefined";
+
     const handleVisibilityChange = (): void => {
-      setSuspended(document.visibilityState === "hidden");
+      // On live wallpapers hosted on desktop, visibilitychange can falsely report 'hidden'
+      // on boot behind foreground windows and stall the render loop.
+      if (!isDesktopWallpaper) {
+        setSuspended(document.visibilityState === "hidden");
+      }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
@@ -364,8 +372,8 @@ export function App() {
       window.electronAPI.onResume(() => setSuspended(false));
     }
 
-    // Lively Wallpaper API compatibility
-    window.livelyPropertyListener = (name: string, val: any) => {
+    // Lively Wallpaper API compatibility handler
+    const handleLivelyProperty = (name: string, val: any): void => {
       if (name === "livelyCurrentWallpaperState") {
         setSuspended(!val);
       } else if (name === "koicount") {
@@ -476,165 +484,186 @@ export function App() {
       }
     };
 
-    // Wallpaper Engine API compatibility
-    (window as any).wallpaperPropertyListener = {
-      applyUserProperties: (properties: Record<string, { value: any }>) => {
-        if (!properties) return;
-        if (properties.koicount !== undefined && properties.koicount.value !== undefined) {
-          const count = clamp(Math.round(Number(properties.koicount.value)), 1, 48);
-          settings.set(["koi", "initialCount"], count);
-          school.setCount(count);
-        }
-        if (properties.weather !== undefined && properties.weather.value !== undefined) {
-          const id = String(properties.weather.value) as WeatherPresetId;
-          settings.setWeather(id);
-          renderer.setWeatherPreset(id);
-        }
-        if (properties.rain !== undefined && properties.rain.value !== undefined) {
-          const enabled = Boolean(properties.rain.value);
-          settings.setRain(enabled);
-          school.setRainIntensity(enabled ? 1 : 0);
-        }
-        if (properties.sound !== undefined && properties.sound.value !== undefined) {
-          const enabled = Boolean(properties.sound.value);
-          setAmbientSoundEnabled(enabled);
-        }
-        if (properties.framerate !== undefined && properties.framerate.value !== undefined) {
-          changeFrameRate(String(properties.framerate.value));
-        }
-        if (properties.visitorfrequency !== undefined && properties.visitorfrequency.value !== undefined) {
-          const val = properties.visitorfrequency.value;
-          const valNum = Number(val);
-          if (valNum === 0 || val === "balanced") school.visitorFrequencySeconds = 120;
-          else if (valNum === 1 || val === "often") school.visitorFrequencySeconds = 60;
-          else if (valNum === 2 || val === "rare") school.visitorFrequencySeconds = 300;
-          else if (valNum === 3 || val === "disabled") school.visitorFrequencySeconds = -1;
-        }
-        if (properties.cycle_interval !== undefined && properties.cycle_interval.value !== undefined) {
-          const mins = Math.max(0, Number(properties.cycle_interval.value));
-          school.cycleIntervalSeconds = mins * 60;
-          school.cycleCountdown = school.cycleIntervalSeconds;
-        }
-        let mutationSettingsChanged = false;
-        for (const mut of Object.values(FishMutation)) {
-          if (mut === FishMutation.None) continue;
-          const propKey = `allow_${mut}`;
-          if (properties[propKey] !== undefined && properties[propKey].value !== undefined) {
-            const val = toBool(properties[propKey].value);
-            if (school.enabledMutations[mut] !== val) {
-              school.setMutationEnabled(mut, val);
-              mutationSettingsChanged = true;
-            }
-          }
-        }
-        if (properties.mutationchance !== undefined && properties.mutationchance.value !== undefined) {
-          const chance = clamp(Number(properties.mutationchance.value) / 100, 0, 1);
-          if (school.mutationChance !== chance) {
-            school.mutationChance = chance;
+    // Wallpaper Engine API compatibility handler
+    const applyWallpaperProperties = (properties: Record<string, { value: any }>): void => {
+      if (!properties) return;
+      if (properties.koicount !== undefined && properties.koicount.value !== undefined) {
+        const count = clamp(Math.round(Number(properties.koicount.value)), 1, 48);
+        settings.set(["koi", "initialCount"], count);
+        school.setCount(count);
+      }
+      if (properties.weather !== undefined && properties.weather.value !== undefined) {
+        const id = String(properties.weather.value) as WeatherPresetId;
+        settings.setWeather(id);
+        renderer.setWeatherPreset(id);
+      }
+      if (properties.rain !== undefined && properties.rain.value !== undefined) {
+        const enabled = Boolean(properties.rain.value);
+        settings.setRain(enabled);
+        school.setRainIntensity(enabled ? 1 : 0);
+      }
+      if (properties.sound !== undefined && properties.sound.value !== undefined) {
+        const enabled = Boolean(properties.sound.value);
+        setAmbientSoundEnabled(enabled);
+      }
+      if (properties.framerate !== undefined && properties.framerate.value !== undefined) {
+        changeFrameRate(String(properties.framerate.value));
+      }
+      if (properties.visitorfrequency !== undefined && properties.visitorfrequency.value !== undefined) {
+        const val = properties.visitorfrequency.value;
+        const valNum = Number(val);
+        if (valNum === 0 || val === "balanced") school.visitorFrequencySeconds = 120;
+        else if (valNum === 1 || val === "often") school.visitorFrequencySeconds = 60;
+        else if (valNum === 2 || val === "rare") school.visitorFrequencySeconds = 300;
+        else if (valNum === 3 || val === "disabled") school.visitorFrequencySeconds = -1;
+      }
+      if (properties.cycle_interval !== undefined && properties.cycle_interval.value !== undefined) {
+        const mins = Math.max(0, Number(properties.cycle_interval.value));
+        school.cycleIntervalSeconds = mins * 60;
+        school.cycleCountdown = school.cycleIntervalSeconds;
+      }
+      let mutationSettingsChanged = false;
+      for (const mut of Object.values(FishMutation)) {
+        if (mut === FishMutation.None) continue;
+        const propKey = `allow_${mut}`;
+        if (properties[propKey] !== undefined && properties[propKey].value !== undefined) {
+          const val = toBool(properties[propKey].value);
+          if (school.enabledMutations[mut] !== val) {
+            school.setMutationEnabled(mut, val);
             mutationSettingsChanged = true;
           }
         }
-        if (mutationSettingsChanged) {
-          school.reseedMutations(settings.meta().weather);
+      }
+      if (properties.mutationchance !== undefined && properties.mutationchance.value !== undefined) {
+        const chance = clamp(Number(properties.mutationchance.value) / 100, 0, 1);
+        if (school.mutationChance !== chance) {
+          school.mutationChance = chance;
+          mutationSettingsChanged = true;
         }
-        if (properties.targetmutation !== undefined && properties.targetmutation.value !== undefined) {
-          targetMutation = parseTargetMutation(properties.targetmutation.value);
+      }
+      if (mutationSettingsChanged) {
+        school.reseedMutations(settings.meta().weather);
+      }
+      if (properties.targetmutation !== undefined && properties.targetmutation.value !== undefined) {
+        targetMutation = parseTargetMutation(properties.targetmutation.value);
+      }
+      if (properties.forcespawn !== undefined && properties.forcespawn.value !== undefined) {
+        const val = Boolean(properties.forcespawn.value);
+        if (lastForceSpawnVal === null) {
+          lastForceSpawnVal = val;
+        } else if (lastForceSpawnVal !== val) {
+          lastForceSpawnVal = val;
+          school.transformRandomFish(targetMutation);
         }
-        if (properties.forcespawn !== undefined && properties.forcespawn.value !== undefined) {
-          const val = Boolean(properties.forcespawn.value);
-          if (lastForceSpawnVal === null) {
-            lastForceSpawnVal = val;
-          } else if (lastForceSpawnVal !== val) {
-            lastForceSpawnVal = val;
-            school.transformRandomFish(targetMutation);
-          }
+      }
+      if (properties.transform_umbra !== undefined && properties.transform_umbra.value !== undefined) {
+        const val = Boolean(properties.transform_umbra.value);
+        if (lastTransformUmbraVal === null) {
+          lastTransformUmbraVal = val;
+        } else if (lastTransformUmbraVal !== val) {
+          lastTransformUmbraVal = val;
+          school.transformRandomFish(FishMutation.Umbra);
         }
-        if (properties.transform_umbra !== undefined && properties.transform_umbra.value !== undefined) {
-          const val = Boolean(properties.transform_umbra.value);
-          if (lastTransformUmbraVal === null) {
-            lastTransformUmbraVal = val;
-          } else if (lastTransformUmbraVal !== val) {
-            lastTransformUmbraVal = val;
-            school.transformRandomFish(FishMutation.Umbra);
-          }
+      }
+      if (properties.transform_aurora !== undefined && properties.transform_aurora.value !== undefined) {
+        const val = Boolean(properties.transform_aurora.value);
+        if (lastTransformAuroraVal === null) {
+          lastTransformAuroraVal = val;
+        } else if (lastTransformAuroraVal !== val) {
+          lastTransformAuroraVal = val;
+          school.transformRandomFish(FishMutation.Aurora);
         }
-        if (properties.transform_aurora !== undefined && properties.transform_aurora.value !== undefined) {
-          const val = Boolean(properties.transform_aurora.value);
-          if (lastTransformAuroraVal === null) {
-            lastTransformAuroraVal = val;
-          } else if (lastTransformAuroraVal !== val) {
-            lastTransformAuroraVal = val;
-            school.transformRandomFish(FishMutation.Aurora);
-          }
+      }
+      if (properties.transform_bunny !== undefined && properties.transform_bunny.value !== undefined) {
+        const val = Boolean(properties.transform_bunny.value);
+        if (lastTransformBunnyVal === null) {
+          lastTransformBunnyVal = val;
+        } else if (lastTransformBunnyVal !== val) {
+          lastTransformBunnyVal = val;
+          school.transformRandomFish(FishMutation.Bunny);
         }
-        if (properties.transform_bunny !== undefined && properties.transform_bunny.value !== undefined) {
-          const val = Boolean(properties.transform_bunny.value);
-          if (lastTransformBunnyVal === null) {
-            lastTransformBunnyVal = val;
-          } else if (lastTransformBunnyVal !== val) {
-            lastTransformBunnyVal = val;
-            school.transformRandomFish(FishMutation.Bunny);
-          }
+      }
+      if (properties.transform_crimson !== undefined && properties.transform_crimson.value !== undefined) {
+        const val = Boolean(properties.transform_crimson.value);
+        if (lastTransformCrimsonVal === null) {
+          lastTransformCrimsonVal = val;
+        } else if (lastTransformCrimsonVal !== val) {
+          lastTransformCrimsonVal = val;
+          school.transformRandomFish(FishMutation.Crimson);
         }
-        if (properties.transform_crimson !== undefined && properties.transform_crimson.value !== undefined) {
-          const val = Boolean(properties.transform_crimson.value);
-          if (lastTransformCrimsonVal === null) {
-            lastTransformCrimsonVal = val;
-          } else if (lastTransformCrimsonVal !== val) {
-            lastTransformCrimsonVal = val;
-            school.transformRandomFish(FishMutation.Crimson);
-          }
+      }
+      if (properties.clock_enabled !== undefined && properties.clock_enabled.value !== undefined) {
+        const enabled = toBool(properties.clock_enabled.value);
+        renderer.pondClock.setEnabled(enabled);
+        if (!enabled) renderer.setClockMode("off");
+      }
+      if (properties.clock_mode !== undefined && properties.clock_mode.value !== undefined) {
+        const val = properties.clock_mode.value;
+        const s = String(val).toLowerCase();
+        let mode: ClockMode = "submerged";
+        if (val === 2 || s.includes("off") || s.includes("disable")) {
+          mode = "off";
+        } else if (val === 1 || s.includes("floating")) {
+          mode = "floating";
         }
-        if (properties.clock_enabled !== undefined && properties.clock_enabled.value !== undefined) {
-          const enabled = toBool(properties.clock_enabled.value);
-          renderer.pondClock.setEnabled(enabled);
-          if (!enabled) renderer.setClockMode("off");
-        }
-        if (properties.clock_mode !== undefined && properties.clock_mode.value !== undefined) {
-          const val = properties.clock_mode.value;
-          const s = String(val).toLowerCase();
-          let mode: ClockMode = "submerged";
-          if (val === 2 || s.includes("off") || s.includes("disable")) {
-            mode = "off";
-          } else if (val === 1 || s.includes("floating")) {
-            mode = "floating";
-          }
-          renderer.setClockMode(mode);
-        }
-        if (properties.clock_format !== undefined && properties.clock_format.value !== undefined) {
-          const val = properties.clock_format.value;
-          const fmt = Number(val) === 1 || String(val).includes("12") ? "12h" : "24h";
-          renderer.pondClock.setFormat(fmt);
-        }
-        if (properties.clock_seconds !== undefined && properties.clock_seconds.value !== undefined) {
-          renderer.pondClock.setShowSeconds(toBool(properties.clock_seconds.value));
-        }
-        if (properties.clock_opacity !== undefined && properties.clock_opacity.value !== undefined) {
-          renderer.pondClock.setOpacity(Number(properties.clock_opacity.value) / 100);
-        }
-        if (properties.clock_position !== undefined && properties.clock_position.value !== undefined) {
-          const val = properties.clock_position.value;
-          const posMap: Record<number | string, "center" | "top-right" | "top-left" | "bottom-center"> = {
-            0: "center",
-            1: "top-right",
-            2: "top-left",
-            3: "bottom-center",
-          };
-          const pos = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "center");
-          renderer.pondClock.setPosition(pos);
-        }
-      },
-      applyGeneralProperties: (properties: Record<string, any>) => {
-        if (properties && properties.fps) {
-          // General max FPS from Wallpaper Engine
-        }
-      },
-      setPaused: (isPaused: boolean) => {
-        setSuspended(isPaused);
-      },
+        renderer.setClockMode(mode);
+      }
+      if (properties.clock_format !== undefined && properties.clock_format.value !== undefined) {
+        const val = properties.clock_format.value;
+        const fmt = Number(val) === 1 || String(val).includes("12") ? "12h" : "24h";
+        renderer.pondClock.setFormat(fmt);
+      }
+      if (properties.clock_seconds !== undefined && properties.clock_seconds.value !== undefined) {
+        renderer.pondClock.setShowSeconds(toBool(properties.clock_seconds.value));
+      }
+      if (properties.clock_opacity !== undefined && properties.clock_opacity.value !== undefined) {
+        renderer.pondClock.setOpacity(Number(properties.clock_opacity.value) / 100);
+      }
+      if (properties.clock_position !== undefined && properties.clock_position.value !== undefined) {
+        const val = properties.clock_position.value;
+        const posMap: Record<number | string, "center" | "top-right" | "top-left" | "bottom-center"> = {
+          0: "center",
+          1: "top-right",
+          2: "top-left",
+          3: "bottom-center",
+        };
+        const pos = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "center");
+        renderer.pondClock.setPosition(pos);
+      }
     };
 
+    // Attach active listener hooks to global bridge
+    window._onWallpaperProperties = applyWallpaperProperties;
+    window._onWallpaperPaused = (isPaused: boolean) => setSuspended(isPaused);
+    window.wallpaperPropertyListener = {
+      applyUserProperties: applyWallpaperProperties,
+      applyGeneralProperties: () => {},
+      setPaused: (isPaused: boolean) => setSuspended(isPaused),
+    };
+
+    // Flush any early properties caught by index.html early bridge before React mounted
+    if (window._pendingWallpaperProperties) {
+      applyWallpaperProperties(window._pendingWallpaperProperties);
+    }
+    if (window._pendingWallpaperPaused !== null && window._pendingWallpaperPaused !== undefined) {
+      setSuspended(window._pendingWallpaperPaused);
+    }
+
+    // Connect Lively bridge and flush pending properties
+    window._onLivelyProperty = handleLivelyProperty;
+    window.livelyPropertyListener = handleLivelyProperty;
+    if (window._pendingLivelyProperties && window._pendingLivelyProperties.length > 0) {
+      for (const item of window._pendingLivelyProperties) {
+        handleLivelyProperty(item.name, item.val);
+      }
+      window._pendingLivelyProperties = [];
+    }
+
     const handleGlobalPointer = (event: MouseEvent | PointerEvent): void => {
+      // Auto-wake if suspended (e.g. from initial background pause)
+      if (isSuspended) {
+        setSuspended(false);
+      }
       const bounds = canvas.getBoundingClientRect();
       const width = bounds.width > 0 ? bounds.width : (window.innerWidth || CANVAS_WIDTH);
       const height = bounds.height > 0 ? bounds.height : (window.innerHeight || CANVAS_HEIGHT);
@@ -648,8 +677,22 @@ export function App() {
       }
     };
 
+    let lastMoveTime = 0;
+    const handlePointerMove = (event: MouseEvent | PointerEvent): void => {
+      if (event.buttons === 0 && event.type !== "touchmove") return;
+      const now = performance.now();
+      if (now - lastMoveTime < 45) return;
+      lastMoveTime = now;
+      handleGlobalPointer(event);
+    };
+
+    // Attach pointer listeners to both canvas and window for 100% reliable capture
+    canvas.addEventListener("pointerdown", handleGlobalPointer);
+    canvas.addEventListener("mousedown", handleGlobalPointer);
+    canvas.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerdown", handleGlobalPointer);
     window.addEventListener("mousedown", handleGlobalPointer);
+    window.addEventListener("pointermove", handlePointerMove);
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.repeat) return;
@@ -742,19 +785,20 @@ export function App() {
     return () => {
       setSuspended(true);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (window.livelyPropertyListener) {
-        delete (window as any).livelyPropertyListener;
-      }
-      if ((window as any).wallpaperPropertyListener) {
-        delete (window as any).wallpaperPropertyListener;
-      }
+      delete window._onWallpaperProperties;
+      delete window._onWallpaperPaused;
+      delete window._onLivelyProperty;
       if (animationFrame) {
         cancelAnimationFrame(animationFrame);
       }
       disconnectEffects();
       resizeObserver.disconnect();
+      canvas.removeEventListener("pointerdown", handleGlobalPointer);
+      canvas.removeEventListener("mousedown", handleGlobalPointer);
+      canvas.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerdown", handleGlobalPointer);
       window.removeEventListener("mousedown", handleGlobalPointer);
+      window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("keydown", handleKeyDown);
       renderer.dispose();
       runtimeRef.current = null;

@@ -17,7 +17,7 @@ export interface ClockOptions {
 }
 
 export const DEFAULT_CLOCK_OPTIONS: ClockOptions = {
-  enabled: false,
+  enabled: true,
   mode: "submerged",
   format: "24h",
   showSeconds: false,
