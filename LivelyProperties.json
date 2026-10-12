@@ -73,11 +73,40 @@
     "type": "dropdown",
     "value": 0,
     "text": "Clock Position",
-    "help": "Screen anchor position of the clock across the pond viewport.",
+    "help": "Clock is anchored at Center of Pond (or set Clock Style to Off) ensuring the boat orbits gracefully around it.",
     "items": [
-      "Center of Pond",
+      "Center of Pond (Locked)"
+    ]
+  },
+  "boat_scale": {
+    "type": "slider",
+    "value": 100,
+    "min": 0,
+    "max": 200,
+    "step": 5,
+    "tick": 20,
+    "text": "Pixel Wooden Boat Scale (%)",
+    "help": "Adjust the scale of the traditional wooden pixel boat (0% disables the boat)."
+  },
+  "boat_speed": {
+    "type": "slider",
+    "value": 100,
+    "min": 0,
+    "max": 200,
+    "step": 5,
+    "tick": 20,
+    "text": "Boat Orbit Speed (%)",
+    "help": "Adjust the orbit cruising speed of the wooden boat around the clock (0% pauses movement)."
+  },
+  "boat_position": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Boat Anchor Position",
+    "help": "Anchor location for the wooden boat across the pond.",
+    "items": [
+      "Right Pond (Scenic)",
+      "Left Pond",
       "Top Right",
-      "Top Left",
       "Bottom Center"
     ]
   },
@@ -144,6 +173,12 @@
     "tick": 10,
     "text": "Fish Cycle Interval (Minutes)",
     "help": "Time interval before fish cycle and re-roll metamorphic evolutions."
+  },
+  "allow_abyssal": {
+    "type": "checkbox",
+    "value": true,
+    "text": "Allow Abyssal (Mythic Trench)",
+    "help": "Deep oceanic trench koi with vibrant blue-purple bioluminescence and glowing particles."
   },
   "allow_astraeus": {
     "type": "checkbox",
