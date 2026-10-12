@@ -321,7 +321,7 @@ export class BoatWakeTrail {
       vertCursor += 6;
     };
 
-    // A. Render Cohesive Central Wake Trail & Kelvin Outer Wave Crests
+    // A. Render Cohesive Frothy Wake Plume Stream (Directly trailing behind stern, matching reference image)
     const n = this.nodes.length;
     if (n >= 2) {
       for (let i = 0; i < n - 1; i++) {
@@ -331,83 +331,71 @@ export class BoatWakeTrail {
         const tA = clamp(nA.age / nA.maxAge, 0, 1);
         const tB = clamp(nB.age / nB.maxAge, 0, 1);
 
-        // 1. Central Wake Stream Ribbon (Continuous channel directly behind stern)
-        const halfWidthA = (3.6 + 2.4 * Math.pow(tA, 0.5)) * (1.0 - 0.20 * tA) * nA.scale;
-        const halfWidthB = (3.6 + 2.4 * Math.pow(tB, 0.5)) * (1.0 - 0.20 * tB) * nB.scale;
+        // Volumetric plume dimensions:
+        // Core width starts at inner propeller wake (~2.4 units), expanding gently
+        const coreHalfW_A = (2.4 + 1.8 * Math.pow(tA, 0.5)) * nA.scale;
+        const coreHalfW_B = (2.4 + 1.8 * Math.pow(tB, 0.5)) * nB.scale;
 
-        const alphaA = clamp(1.0 - tA, 0, 1) * (1.0 - Math.pow(tA, 1.6)) * 0.82;
-        const alphaB = clamp(1.0 - tB, 0, 1) * (1.0 - Math.pow(tB, 1.6)) * 0.82;
+        // Outer diffused frothy plume width (matches boat stern width ~4.8 units, slowly diffusing to ~7.8 units)
+        const outerHalfW_A = (4.8 + 3.2 * Math.pow(tA, 0.6)) * (1.0 - 0.12 * tA) * nA.scale;
+        const outerHalfW_B = (4.8 + 3.2 * Math.pow(tB, 0.6)) * (1.0 - 0.12 * tB) * nB.scale;
 
-        if (alphaA > 0.01 || alphaB > 0.01) {
-          const cA = nA.pos;
-          const cB = nB.pos;
+        // Smooth volumetric decay: dense milky foam behind vessel, dissolving gracefully into blue water
+        const alphaA = clamp(1.0 - tA, 0, 1) * (1.0 - Math.pow(tA, 1.8)) * 0.88;
+        const alphaB = clamp(1.0 - tB, 0, 1) * (1.0 - Math.pow(tB, 1.8)) * 0.88;
 
-          const lA = vec(cA.x + nA.normal.x * halfWidthA, cA.y + nA.normal.y * halfWidthA);
-          const lB = vec(cB.x + nB.normal.x * halfWidthB, cB.y + nB.normal.y * halfWidthB);
-          const rA = vec(cA.x - nA.normal.x * halfWidthA, cA.y - nA.normal.y * halfWidthA);
-          const rB = vec(cB.x - nB.normal.x * halfWidthB, cB.y - nB.normal.y * halfWidthB);
+        if (alphaA <= 0.01 && alphaB <= 0.01) continue;
 
-          // Left Half Stream
-          writeQuad(
-            lA, cA, cB, lB,
-            [frR, frG, frB, alphaA * 0.35],
-            [cr, cg, cb, alphaA],
-            [cr, cg, cb, alphaB],
-            [frR, frG, frB, alphaB * 0.35],
-          );
+        const cA = nA.pos;
+        const cB = nB.pos;
 
-          // Right Half Stream
-          writeQuad(
-            cA, rA, rB, cB,
-            [cr, cg, cb, alphaA],
-            [frR, frG, frB, alphaA * 0.35],
-            [frR, frG, frB, alphaB * 0.35],
-            [cr, cg, cb, alphaB],
-          );
-        }
+        // Core boundaries
+        const coreLA = vec(cA.x + nA.normal.x * coreHalfW_A, cA.y + nA.normal.y * coreHalfW_A);
+        const coreLB = vec(cB.x + nB.normal.x * coreHalfW_B, cB.y + nB.normal.y * coreHalfW_B);
+        const coreRA = vec(cA.x - nA.normal.x * coreHalfW_A, cA.y - nA.normal.y * coreHalfW_A);
+        const coreRB = vec(cB.x - nB.normal.x * coreHalfW_B, cB.y - nB.normal.y * coreHalfW_B);
 
-        // 2. Stylized V-shaped Kelvin Wake Wave Crests (peeling outward as seen in reference)
-        const spreadA = (3.8 + 14.0 * Math.pow(tA, 0.65)) * nA.scale;
-        const spreadB = (3.8 + 14.0 * Math.pow(tB, 0.65)) * nB.scale;
-        const crestThickA = 1.6 * (1.0 - tA * 0.35) * nA.scale;
-        const crestThickB = 1.6 * (1.0 - tB * 0.35) * nB.scale;
+        // Outer diffused plume boundaries
+        const outLA = vec(cA.x + nA.normal.x * outerHalfW_A, cA.y + nA.normal.y * outerHalfW_A);
+        const outLB = vec(cB.x + nB.normal.x * outerHalfW_B, cB.y + nB.normal.y * outerHalfW_B);
+        const outRA = vec(cA.x - nA.normal.x * outerHalfW_A, cA.y - nA.normal.y * outerHalfW_A);
+        const outRB = vec(cB.x - nB.normal.x * outerHalfW_B, cB.y - nB.normal.y * outerHalfW_B);
 
-        const crestAlphaA = clamp(Math.sin(tA * Math.PI) * 1.15, 0, 1) * (1.0 - Math.pow(tA, 1.8)) * 0.75;
-        const crestAlphaB = clamp(Math.sin(tB * Math.PI) * 1.15, 0, 1) * (1.0 - Math.pow(tB, 1.8)) * 0.75;
+        // 1. Left Core Quad (Dense white center to mid foam)
+        writeQuad(
+          coreLA, cA, cB, coreLB,
+          [cr, cg, cb, alphaA * 0.70],
+          [cr, cg, cb, alphaA],
+          [cr, cg, cb, alphaB],
+          [cr, cg, cb, alphaB * 0.70],
+        );
 
-        if (crestAlphaA > 0.01 || crestAlphaB > 0.01) {
-          // Port (Left) Crest Ribbon
-          const portMidA = vec(nA.pos.x + nA.normal.x * spreadA, nA.pos.y + nA.normal.y * spreadA);
-          const portMidB = vec(nB.pos.x + nB.normal.x * spreadB, nB.pos.y + nB.normal.y * spreadB);
-          const pL1 = vec(portMidA.x - nA.normal.x * crestThickA, portMidA.y - nA.normal.y * crestThickA);
-          const pL2 = vec(portMidA.x + nA.normal.x * crestThickA, portMidA.y + nA.normal.y * crestThickA);
-          const pL3 = vec(portMidB.x + nB.normal.x * crestThickB, portMidB.y + nB.normal.y * crestThickB);
-          const pL4 = vec(portMidB.x - nB.normal.x * crestThickB, portMidB.y - nB.normal.y * crestThickB);
+        // 2. Right Core Quad (Center to mid foam)
+        writeQuad(
+          cA, coreRA, coreRB, cB,
+          [cr, cg, cb, alphaA],
+          [cr, cg, cb, alphaA * 0.70],
+          [cr, cg, cb, alphaB * 0.70],
+          [cr, cg, cb, alphaB],
+        );
 
-          writeQuad(
-            pL1, pL2, pL3, pL4,
-            [cr, cg, cb, crestAlphaA],
-            [frR, frG, frB, crestAlphaA * 0.3],
-            [frR, frG, frB, crestAlphaB * 0.3],
-            [cr, cg, cb, crestAlphaB],
-          );
+        // 3. Left Diffuse Fringe Quad (Mid foam fading smoothly to water)
+        writeQuad(
+          outLA, coreLA, coreLB, outLB,
+          [frR, frG, frB, 0.0],
+          [cr, cg, cb, alphaA * 0.70],
+          [cr, cg, cb, alphaB * 0.70],
+          [frR, frG, frB, 0.0],
+        );
 
-          // Starboard (Right) Crest Ribbon
-          const starMidA = vec(nA.pos.x - nA.normal.x * spreadA, nA.pos.y - nA.normal.y * spreadA);
-          const starMidB = vec(nB.pos.x - nB.normal.x * spreadB, nB.pos.y - nB.normal.y * spreadB);
-          const pR1 = vec(starMidA.x + nA.normal.x * crestThickA, starMidA.y + nA.normal.y * crestThickA);
-          const pR2 = vec(starMidA.x - nA.normal.x * crestThickA, starMidA.y - nA.normal.y * crestThickA);
-          const pR3 = vec(starMidB.x - nB.normal.x * crestThickB, starMidB.y - nB.normal.y * crestThickB);
-          const pR4 = vec(starMidB.x + nB.normal.x * crestThickB, starMidB.y + nB.normal.y * crestThickB);
-
-          writeQuad(
-            pR1, pR2, pR3, pR4,
-            [cr, cg, cb, crestAlphaA],
-            [frR, frG, frB, crestAlphaA * 0.3],
-            [frR, frG, frB, crestAlphaB * 0.3],
-            [cr, cg, cb, crestAlphaB],
-          );
-        }
+        // 4. Right Diffuse Fringe Quad (Mid foam fading smoothly to water)
+        writeQuad(
+          coreRA, outRA, outRB, coreRB,
+          [cr, cg, cb, alphaA * 0.70],
+          [frR, frG, frB, 0.0],
+          [frR, frG, frB, 0.0],
+          [cr, cg, cb, alphaB * 0.70],
+        );
       }
     }
 
