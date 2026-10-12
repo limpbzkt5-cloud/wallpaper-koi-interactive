@@ -15,7 +15,7 @@
 
 *A procedural 3D aquatic desktop wallpaper featuring real-time shallow water wave simulation, biomechanical spine kinematics, frosted glassmorphism pond clock, artisanal pixel boat with audio-reactive gramophone, hydrodynamic stern wake ribbons, proximity feeding, and 14 mythical koi mutations.*
 
-[Features](#-key-features) • [Installation](#-installation-guide) • [Controls](#-interactive-controls) • [Customization](#-customization-reference) • [Physics & Math](#-mathematical--computational-model) • [Development](#-development--scripts)
+[Features](#-key-features) • [Installation](#-installation-guide) • [Math & Physics](#-mathematical--computational-model) • [Development](#-development--scripts)
 
 </div>
 
@@ -77,7 +77,8 @@ Koi periodically metamorphose into mythical variants with custom particle effect
 - **Mist**: Atmospheric morning fog.
 - **Deep Clear**: Vibrant cyan tropical lagoon.
 
-### ⚡ Performance & Battery Efficiency
+### ⚡ Performance & Adaptive Screen Aspect Ratio
+- **Full Viewport Display**: Automatically adapts to any monitor ratio (16:9, 16:10, 21:9 ultrawide, 3:2, 4:3) with 100% full-screen coverage and zero letterbox/pillarbox black bars.
 - **0% GPU Background Suspension**: Automatically pauses rendering when full-screen applications or 3D games are active, preserving 100% of GPU resources.
 - **Frame Rate Limiter**: Native (Uncapped), 60 FPS, 45 FPS, and 30 FPS options to optimize laptop battery life.
 
@@ -133,86 +134,72 @@ npm run sync:all
 
 ---
 
-## 🎮 Interactive Controls
-
-| Interaction / Key | Action | Effect |
-| :--- | :--- | :--- |
-| **Left Click / Tap** | Click on pond surface | Generates circular water ripples; nudges nearby lotus leaves and duckweed |
-| **Click & Drag (Water)** | Move mouse across surface | Generates continuous hydrodynamic ripples; fish naturally react and navigate |
-| **Click Gramophone** | Tap boat brass horn / record | Toggles audio playback (ambient stream / soundtrack) with volume ramping |
-| **Click Boat Feeder** | Tap food compartment | Launches floating food pellets into the pond near the boat |
-| **Drag Boat** | Drag boat across pond | Repositions the boat with fluid inertia; smoothly returns to cruising orbit |
-| **`B`** | Drop boat feed pellets | Drops food pellets from the boat directly into the pond |
-| **`N` / `P`** | Next / Previous track | Cycles between available ambient soundtrack selections |
-| **`O` / `=`** | Transform Abyssal | Immediately transforms a koi into the mythic **Abyssal Mutation** |
-| **`1` – `0`** | Mutation Hotkeys | Fast-transforms a koi (1: Crimson, 2: Bunny, 3: Aurora, 4: Umbra, 5: Midas, 6: Electric, 7: Frozen, 8: Nuclear, 9: Mythical, 0: Rainbow Cluster) |
-| **`U`, `I`, `S`, `A`, `M`**| Mutation Hotkeys | Umbra (`U`), Ishmael (`I`), Serene (`S`), Astraeus (`A`), or target fish (`M`) |
-| **`-` / `~`** | Clear Mutation | Reverts transformed fish back to standard koi coloration |
-| **`Space`** | Scatter koi | Smooth impulse gently dispersing fish outward across the pond |
-| **`[` / `]`** | Adjust fish population | Decreases / increases koi count in real-time |
-| **`C`** | Cycle clock modes | Toggles between `Submerged`, `Floating`, and `Off` |
-| **`R`** | Reset pond | Re-seeds school genetics, positions, and mutations |
-| **`D`** | Toggle debug HUD | Displays real-time telemetry, FPS, and boid parameters |
-
----
-
-## ⚙️ Customization Reference
-
-| Property Key | Control Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `weather` | Dropdown | `Sunny` | Diurnal lighting and water caustics preset |
-| `clock_enabled` | Checkbox | `true` | Display frosted glass pond clock |
-| `clock_mode` | Dropdown | `Submerged` | `Submerged` (underwater caustics), `Floating` (surface HUD), or `Off` |
-| `clock_format` | Dropdown | `24-Hour` | Standard 24h or 12h (AM/PM) format |
-| `clock_seconds` | Checkbox | `false` | Auxiliary seconds counter badge |
-| `clock_opacity` | Slider | `45%` | Transparency level of the frosted glass (10%–100%) |
-| `clock_position` | Dropdown | `Center` | Screen anchor: Center, Top-Right, Top-Left, Bottom-Center |
-| `boat_scale` | Slider | `100%` | Funamori pixel boat scale (0%–200%; set to 0% to hide boat) |
-| `boat_speed` | Slider | `100%` | Orbit cruising speed of the boat (0%–200%; 0% pauses movement) |
-| `boat_position` | Dropdown | `Right Pond` | Anchor preset: Right Pond, Left Pond, Top Right, Bottom Center |
-| `koicount` | Slider | `16` | Total koi fish count (1 to 48) |
-| `rain` | Checkbox | `false` | Raindrops and surface wave perturbations |
-| `sound` | Checkbox | `false` | Ambient river stream audio loop |
-| `framerate` | Dropdown | `Native` | Frame rate limiter: Native, 60, 45, or 30 FPS |
-| `visitorfrequency`| Dropdown | `Balanced` | Frequency of rare nomadic visitor fish appearances |
-| `mutationchance` | Slider | `70%` | Probability of koi metamorphosing during cycle intervals |
-| `allow_abyssal` | Checkbox | `true` | Enable rare Abyssal deep-trench koi mutation |
-| `allow_*` | Checkboxes | `true` | Individual toggles for each of the 14 legendary mutations |
-
----
-
 ## 📐 Mathematical & Computational Model
 
-### 1. 2D Hydrodynamic Shallow Water Wave Equation
-Water surface displacement $h(x, y, t)$ is modeled using a finite-difference discretization of the 2D wave equation with viscous damping:
-$$\frac{\partial^2 h}{\partial t^2} = c^2 \left(\frac{\partial^2 h}{\partial x^2} + \frac{\partial^2 h}{\partial y^2}\right) - \gamma \frac{\partial h}{\partial t}$$
-Where $c$ is the wave propagation speed and $\gamma$ denotes viscous dissipation.
+### 1. 2D Shallow Water Wave Propagation (FDTD)
+Surface elevation $h(x, y, t)$ is modeled using a finite-difference time-domain discretization of the 2D acoustic-gravity wave equation with viscous dissipation $\gamma$:
 
-### 2. Frosted Glass Surface Normals & Specular Rim Optics
-Character bevel normal vectors are evaluated via central differences on the font texture alpha channel:
-$$\vec{n}_{\text{bevel}} = \left(\frac{\alpha_{x+1} - \alpha_{x-1}}{2}, \frac{\alpha_{y+1} - \alpha_{y-1}}{2}\right)$$
-Specular gleam along the rounded glass perimeter is computed using a directional Blinn-Phong term:
-$$\text{SpecularRim} = \max\left(0, \vec{n}_{\text{bevel}} \cdot (-\vec{L})\right)^{2.5} \times \text{smoothstep}(0.10, 0.50, \|\vec{n}_{\text{bevel}}\|)$$
+$$\frac{\partial^2 h}{\partial t^2} = c^2 \nabla^2 h - \gamma \frac{\partial h}{\partial t} = c^2 \left(\frac{\partial^2 h}{\partial x^2} + \frac{\partial^2 h}{\partial y^2}\right) - \gamma \frac{\partial h}{\partial t}$$
 
-### 3. Biomechanical Spline Kinematics & Curvature Safety
-Each fish spine is represented by 10 connected vertebral nodes. The angular deflection between adjacent vertebrae $\Delta \theta_i$ is strictly constrained:
-$$\sum_{i=1}^{9} |\Delta \theta_i| \le \theta_{\text{max}} = 52.7^\circ$$
-Preventing unnatural body curvature and mesh intersection during rapid turns.
+Discretized over a spatial grid $\Delta x = \Delta y = 1$ with timestep $\Delta t$:
 
-### 4. Proximity Feeding & Hydrodynamic Suction Dynamics
-Food pellets float with surface friction. When a koi's mouth position $\vec{m}_j$ enters proximity radius $R_{\text{prox}}$, an attractive hydrodynamic suction force accelerates the pellet toward the fish's oral cavity:
-$$\vec{F}_{\text{suction}} = -k_{\text{suction}} \cdot \frac{\vec{p} - \vec{m}_j}{\|\vec{p} - \vec{m}_j\| + \epsilon}$$
-When the distance satisfies $\|\vec{p} - \vec{m}_j\| \le R_{\text{eat}}$, the pellet is consumed, triggering an authentic head gulp animation and a localized mouth ripple ring.
+$$h^{t+\Delta t}_{i,j} = (2 - \gamma\Delta t) h^t_{i,j} - (1 - \gamma\Delta t) h^{t-\Delta t}_{i,j} + c^2 \Delta t^2 \left(h^t_{i+1,j} + h^t_{i-1,j} + h^t_{i,j+1} + h^t_{i,j-1} - 4h^t_{i,j}\right)$$
 
-### 5. Sinusoidal Dispersal Envelope & Gentle Schooling Dynamics
-Following feeding or user interaction, clustered fish disperse smoothly across the pond after a 5.0-second delay. The dispersal intensity follows a sinusoidal ease-in/ease-out envelope over duration $T = 6.0\,\text{s}$:
-$$I_{\text{scatter}}(\tau) = I_{\text{peak}} \cdot \sin(\pi \tau), \quad \tau = \operatorname{clamp}\left(1 - \frac{t_{\text{remaining}}}{T}, 0, 1\right)$$
-Radial repulsive forces and separation distances scale smoothly with $I_{\text{scatter}}$, ensuring natural, fluid dispersal without discontinuous velocity jumps.
+Numerical stability is unconditionally guaranteed under the Courant-Friedrichs-Lewy (CFL) condition:
 
-### 6. Hydrodynamic Stern Wake Plume Geometry
-As the boat cruises with velocity $\vec{v}(t)$ and normal $\hat{n}(t)$, trailing wake vertices $\vec{r}(t)$ are generated directly behind the stern:
-$$w(\xi) = \left(W_{\text{stern}} + W_{\text{diff}} \cdot \xi^{0.5}\right) \cdot (1 - 0.22\,\xi) \cdot \text{scale}, \quad \xi = \frac{a(t)}{\tau_{\text{trail}}} \in [0, 1]$$
-Ribbon opacity decays under smooth quadratic damping $\alpha(\xi) = \alpha_0 (1 - \xi^{1.6}) \sin(\pi \xi^{0.75})$, producing an elegant aquatic wake trail.
+$$c \frac{\Delta t}{\Delta x} \le \frac{1}{\sqrt{2}}$$
+
+### 2. Biomechanical Spline Kinematics & Curvature Safety
+Each koi body is represented by $N = 10$ linked vertebral nodes with segment lengths $\ell_i$. Node $i$ follows preceding node $i-1$ subject to a cephalocaudal stiffness gradient:
+
+$$\mathbf{p}_i = \mathbf{p}_{i-1} - \ell_i \begin{bmatrix} \cos \theta_i \\ \sin \theta_i \end{bmatrix}$$
+
+Total body bending curvature is bounded by an anatomical deflection threshold $\theta_{\max}$:
+
+$$\sum_{i=1}^{N-1} |\theta_i - \theta_{i-1}| \le \theta_{\max} = 52.7^\circ$$
+
+preventing self-intersection and unnatural mesh folding during high-speed swimming maneuvers.
+
+### 3. Autonomous Schooling & Sinusoidal Dispersal Envelope
+Fish steering velocity integrates cohesion, alignment, depth-weighted separation, and obstacle deflection:
+
+$$\mathbf{F}_{\text{steer}} = w_{\text{sep}} \mathbf{F}_{\text{sep}} + w_{\text{align}} \mathbf{F}_{\text{align}} + w_{\text{coh}} \mathbf{F}_{\text{coh}} + \mathbf{F}_{\text{radial}}$$
+
+Following feeding completion or interaction, cluster dispersal is modulated by a smooth sinusoidal envelope over duration $T = 6.0\,\text{s}$:
+
+$$I_{\text{scatter}}(\tau) = I_{\text{peak}} \sin(\pi \tau), \quad \tau = \operatorname{clamp}\left(1 - \frac{t_{\text{remaining}}}{T}, 0, 1\right)$$
+
+Because $I_{\text{scatter}}(0) = I_{\text{scatter}}(1) = 0$ with $\mathcal{C}^1$ continuity, fish disperse across the pond with zero abrupt heading or velocity discontinuities.
+
+### 4. Frosted Glass Normals & Specular Rim Optics
+Surface normal vectors $\mathbf{n}_{\text{bevel}}$ are extracted via central difference gradient on font texture alpha channel $\alpha(x, y)$:
+
+$$\mathbf{n}_{\text{bevel}} = \frac{1}{2} \begin{bmatrix} \alpha(x+1, y) - \alpha(x-1, y) \\ \alpha(x, y+1) - \alpha(x, y-1) \end{bmatrix}$$
+
+Specular rim gleam along curved glass bevel contours is evaluated via Blinn-Phong reflectance:
+
+$$I_{\text{rim}} = \max\left(0, \mathbf{n}_{\text{bevel}} \cdot (-\mathbf{L})\right)^{2.5} \times \operatorname{smoothstep}(0.10, 0.50, \|\mathbf{n}_{\text{bevel}}\|)$$
+
+### 5. Hydrodynamic Stern Wake Plume Geometry
+As the boat cruises with planar velocity $\mathbf{v}(t)$ and lateral normal $\hat{\mathbf{n}}(t)$, trailing wake vertices $\mathbf{r}(t)$ expand behind the stern:
+
+$$W(\xi) = \left(W_0 + W_{\text{diff}} \xi^{0.5}\right)(1 - 0.22\xi) \cdot s, \quad \xi = \frac{t_{\text{age}}}{\tau_{\text{trail}}} \in [0, 1]$$
+
+Wake plume opacity decays under quadratic damping $\alpha(\xi) = \alpha_0 (1 - \xi^{1.6}) \sin(\pi \xi^{0.75})$, producing an unbroken aquatic wake trail.
+
+### 6. Adaptive Viewport & Isotropic Resolution Scaling
+For any monitor resolution $W_{\text{screen}} \times H_{\text{screen}}$ with aspect ratio $A = W_{\text{screen}} / H_{\text{screen}}$, the pixel-art simulation canvas dynamically sizes as:
+
+$$\begin{cases}
+W_{\text{render}} = \operatorname{round}(H_{\text{base}} \cdot A), \quad H_{\text{render}} = H_{\text{base}} = 270 & \text{if } A \ge 1.0 \text{ (Landscape)} \\
+W_{\text{render}} = H_{\text{base}} = 270, \quad H_{\text{render}} = \operatorname{round}(H_{\text{base}} / A) & \text{if } A < 1.0 \text{ (Portrait)}
+\end{cases}$$
+
+The resulting display scale factors satisfy:
+
+$$S_x = \frac{W_{\text{screen}}}{W_{\text{render}}} = \frac{H_{\text{screen}}}{H_{\text{render}}} = S_y$$
+
+ensuring perfectly isotropic square pixels and complete full-screen coverage with **zero black bars** across all display standards (16:9, 16:10, 21:9 ultrawide, 3:2, 4:3).
 
 ---
 
