@@ -63,35 +63,6 @@
     "tick": 20,
     "text": "Mutation Metamorphosis Rate (%)"
   },
-  "targetmutation": {
-    "type": "dropdown",
-    "value": 0,
-    "text": "Target Mutation To Spawn",
-    "items": [
-      "Random Mutation",
-      "Crimson (Rare)",
-      "Bunny (Special)",
-      "Aurora (Legendary)",
-      "Umbra (Mythic)",
-      "Midas (Legendary)",
-      "Electric (Rare)",
-      "Frozen (Rare)",
-      "Nuclear (Special)",
-      "Mythical (Mythic)",
-      "Rainbow Cluster (Legendary)",
-      "Ishmael (Rare)",
-      "Serene (Rare)",
-      "Astraeus (Mythic)"
-    ]
-  },
-  "forcespawn": {
-    "type": "button",
-    "text": "Instant Transform Selected Mutation"
-  },
-  "transform_umbra": {
-    "type": "button",
-    "text": "Instant Transform 1 Koi to Umbra"
-  },
   "cycle_interval": {
     "type": "slider",
     "value": 2,

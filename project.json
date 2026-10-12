@@ -129,91 +129,12 @@
         "type": "slider",
         "value": 70
       },
-      "targetmutation": {
-        "condition": "",
-        "options": [
-          {
-            "label": "Random Mutation",
-            "value": "random"
-          },
-          {
-            "label": "Crimson (Rare)",
-            "value": "crimson"
-          },
-          {
-            "label": "Bunny (Special)",
-            "value": "bunny"
-          },
-          {
-            "label": "Aurora (Legendary)",
-            "value": "aurora"
-          },
-          {
-            "label": "Umbra (Mythic)",
-            "value": "umbra"
-          },
-          {
-            "label": "Midas (Legendary)",
-            "value": "midas"
-          },
-          {
-            "label": "Electric (Rare)",
-            "value": "electric"
-          },
-          {
-            "label": "Frozen (Rare)",
-            "value": "frozen"
-          },
-          {
-            "label": "Nuclear (Special)",
-            "value": "nuclear"
-          },
-          {
-            "label": "Mythical (Mythic)",
-            "value": "mythical"
-          },
-          {
-            "label": "Rainbow Cluster (Legendary)",
-            "value": "rainbow_cluster"
-          },
-          {
-            "label": "Ishmael (Rare)",
-            "value": "ishmael"
-          },
-          {
-            "label": "Serene (Rare)",
-            "value": "serene"
-          },
-          {
-            "label": "Astraeus (Mythic)",
-            "value": "astraeus"
-          }
-        ],
-        "order": 8,
-        "text": "Target Mutation To Spawn",
-        "type": "combo",
-        "value": "random"
-      },
-      "forcespawn": {
-        "condition": "",
-        "order": 9,
-        "text": "Instant Transform Selected Mutation (Click / Toggle)",
-        "type": "bool",
-        "value": false
-      },
-      "transform_umbra": {
-        "condition": "",
-        "order": 10,
-        "text": "Instant Transform 1 Koi to Umbra (Click / Toggle)",
-        "type": "bool",
-        "value": false
-      },
       "cycle_interval": {
         "condition": "",
         "fraction": false,
         "max": 10,
         "min": 1,
-        "order": 11,
+        "order": 8,
         "precision": 1,
         "step": 1,
         "text": "Fish Cycle Interval (Minutes)",
@@ -222,98 +143,98 @@
       },
       "allow_crimson": {
         "condition": "",
-        "order": 12,
+        "order": 9,
         "text": "Allow Crimson Mutation",
         "type": "bool",
         "value": true
       },
       "allow_bunny": {
         "condition": "",
-        "order": 13,
+        "order": 10,
         "text": "Allow Bunny Mutation",
         "type": "bool",
         "value": true
       },
       "allow_aurora": {
         "condition": "",
-        "order": 14,
+        "order": 11,
         "text": "Allow Aurora Mutation",
         "type": "bool",
         "value": true
       },
       "allow_umbra": {
         "condition": "",
-        "order": 15,
+        "order": 12,
         "text": "Allow Umbra Mutation",
         "type": "bool",
         "value": true
       },
       "allow_midas": {
         "condition": "",
-        "order": 16,
+        "order": 13,
         "text": "Allow Midas Mutation",
         "type": "bool",
         "value": true
       },
       "allow_electric": {
         "condition": "",
-        "order": 17,
+        "order": 14,
         "text": "Allow Electric Mutation",
         "type": "bool",
         "value": true
       },
       "allow_frozen": {
         "condition": "",
-        "order": 18,
+        "order": 15,
         "text": "Allow Frozen Mutation",
         "type": "bool",
         "value": true
       },
       "allow_nuclear": {
         "condition": "",
-        "order": 19,
+        "order": 16,
         "text": "Allow Nuclear Mutation",
         "type": "bool",
         "value": true
       },
       "allow_mythical": {
         "condition": "",
-        "order": 20,
+        "order": 17,
         "text": "Allow Mythical Mutation",
         "type": "bool",
         "value": true
       },
       "allow_rainbow_cluster": {
         "condition": "",
-        "order": 21,
+        "order": 18,
         "text": "Allow Rainbow Cluster Mutation",
         "type": "bool",
         "value": true
       },
       "allow_ishmael": {
         "condition": "",
-        "order": 22,
+        "order": 19,
         "text": "Allow Ishmael Mutation",
         "type": "bool",
         "value": true
       },
       "allow_serene": {
         "condition": "",
-        "order": 23,
+        "order": 20,
         "text": "Allow Serene Mutation",
         "type": "bool",
         "value": true
       },
       "allow_astraeus": {
         "condition": "",
-        "order": 24,
+        "order": 21,
         "text": "Allow Astraeus Mutation",
         "type": "bool",
         "value": true
       },
       "clock_enabled": {
         "condition": "",
-        "order": 25,
+        "order": 22,
         "text": "Display Pond Clock",
         "type": "bool",
         "value": true
@@ -334,7 +255,7 @@
             "value": "off"
           }
         ],
-        "order": 26,
+        "order": 23,
         "text": "Clock Style",
         "type": "combo",
         "value": "submerged"
@@ -351,14 +272,14 @@
             "value": "12h"
           }
         ],
-        "order": 27,
+        "order": 24,
         "text": "Clock Time Format",
         "type": "combo",
         "value": "24h"
       },
       "clock_seconds": {
         "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
-        "order": 28,
+        "order": 25,
         "text": "Show Seconds",
         "type": "bool",
         "value": false
@@ -368,7 +289,7 @@
         "fraction": false,
         "max": 100,
         "min": 10,
-        "order": 30,
+        "order": 26,
         "precision": 1,
         "step": 2,
         "text": "Clock Opacity (%)",
@@ -395,7 +316,7 @@
             "value": "bottom-center"
           }
         ],
-        "order": 31,
+        "order": 27,
         "text": "Clock Position",
         "type": "combo",
         "value": "center"
