@@ -796,10 +796,14 @@ const butterflies = group(
       scale: num({ default: 0.82, min: 0, max: 3, step: 0.01 }),
     }),
     palettes: list(butterflyPalette, [
-      { wing: 0xf3a64c, wingLight: 0xffd36b, accent: 0x75448b, body: 0x3e2d35 },
-      { wing: 0x71bce8, wingLight: 0xb8e4f5, accent: 0x315b9d, body: 0x293747 },
-      { wing: 0xe9789d, wingLight: 0xffb4c5, accent: 0x8f416b, body: 0x49303c },
-      { wing: 0xc4df58, wingLight: 0xeaf68a, accent: 0x508c61, body: 0x334239 },
+      { wing: 0xf3a64c, wingLight: 0xffd36b, accent: 0x75448b, body: 0x3e2d35 }, // 0: Monarch / Amber Gold
+      { wing: 0x48a3e6, wingLight: 0x9be0ff, accent: 0x23497d, body: 0x243242 }, // 1: Blue Morpho
+      { wing: 0xe9789d, wingLight: 0xffb4c5, accent: 0x8f416b, body: 0x49303c }, // 2: Sakura Pink
+      { wing: 0x52c982, wingLight: 0x8ef0b3, accent: 0x1e6e40, body: 0x203b2c }, // 3: Emerald Swallowtail
+      { wing: 0x9b6ee5, wingLight: 0xcfb2ff, accent: 0x512e87, body: 0x332549 }, // 4: Twilight Violet
+      { wing: 0xe54235, wingLight: 0xff7c66, accent: 0x781a14, body: 0x3b1d1c }, // 5: Crimson Flame
+      { wing: 0xf6d83b, wingLight: 0xfff07d, accent: 0xa87e11, body: 0x483e20 }, // 6: Sunburst Yellow
+      { wing: 0xedf7f5, wingLight: 0xffffff, accent: 0x6ca398, body: 0x394340 }, // 7: Pearlescent White
     ]),
   },
   { label: "Butterflies", effect: "butterflies:keep" },
@@ -817,8 +821,8 @@ const butterflySpawns = collection(butterflySpawnItem, [
   { x: 416, y: 71, phase: 1.9, palette: 1 },
   { x: 394, y: 214, phase: 3.6, palette: 2 },
   { x: 101, y: 218, phase: 5.2, palette: 3 },
-  { x: 244, y: 30, phase: 0.9, palette: 1 },
-  { x: 252, y: 242, phase: 4.4, palette: 0 },
+  { x: 244, y: 30, phase: 0.9, palette: 4 },
+  { x: 252, y: 242, phase: 4.4, palette: 5 },
 ], {
   label: "Butterfly spawns",
   countFrom: ["butterflies", "visibleCount"],

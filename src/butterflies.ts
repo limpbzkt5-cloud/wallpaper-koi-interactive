@@ -48,7 +48,7 @@ interface Butterfly {
   randomState: number;
 }
 
-const PALETTES: readonly ButterflyPalette[] = BUTTERFLIES.palettes.map(
+let PALETTES: ButterflyPalette[] = BUTTERFLIES.palettes.map(
   (palette) => ({
     wing: new THREE.Color(palette.wing),
     wingLight: new THREE.Color(palette.wingLight),
@@ -142,14 +142,12 @@ export class ButterflyPass {
     this.shadowMaterial.color.setHex(BUTTERFLIES.shadow.color);
     this.shadowMaterial.opacity = BUTTERFLIES.shadow.opacity;
     SHADOW_COLOR.setHex(BUTTERFLIES.shadow.color);
-    for (const [index, palette] of BUTTERFLIES.palettes.entries()) {
-      const target = PALETTES[index];
-      if (!target) continue;
-      target.wing.setHex(palette.wing);
-      target.wingLight.setHex(palette.wingLight);
-      target.accent.setHex(palette.accent);
-      target.body.setHex(palette.body);
-    }
+    PALETTES = BUTTERFLIES.palettes.map((palette) => ({
+      wing: new THREE.Color(palette.wing),
+      wingLight: new THREE.Color(palette.wingLight),
+      accent: new THREE.Color(palette.accent),
+      body: new THREE.Color(palette.body),
+    }));
     const previous = this.butterflies;
     this.butterflies = this.createButterflies();
     if (preserveMovement) {

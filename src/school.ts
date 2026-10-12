@@ -199,11 +199,8 @@ export class School {
       (m) => m !== FishMutation.None && this.enabledMutations[m] === true,
     );
 
-    // 70% of the time (or with probability min(1.0, this.mutationChance)),
-    // ensure comprehensive diversity where 1 of each enabled mutation is guaranteed to exist!
-    const guaranteeDiversity =
-      enabledList.length > 0 &&
-      this.random.range(0, 1) < Math.min(1.0, this.mutationChance);
+    // Always guarantee full diversity so each enabled mythical/celestial mutation is represented
+    const guaranteeDiversity = enabledList.length > 0;
 
     if (guaranteeDiversity) {
       // Fisher-Yates shuffle enabledList
@@ -433,12 +430,8 @@ export class School {
           const missingMutations = enabledList.filter((m) => this.countMutation(m) === 0);
 
           let mutation: FishMutation = FishMutation.None;
-          // 70% of the time (or with probability min(1.0, this.mutationChance)),
-          // prioritize filling a missing mutation so all mutations continue to exist!
-          if (
-            missingMutations.length > 0 &&
-            this.random.range(0, 1) < Math.min(1.0, this.mutationChance)
-          ) {
+          // Always prioritize filling a missing mutation so all mutations continuously swim in the pond!
+          if (missingMutations.length > 0) {
             mutation = missingMutations[Math.floor(this.random.range(0, missingMutations.length))];
           } else {
             const eligibleMutations: Partial<Record<FishMutation, boolean>> = { ...this.enabledMutations };

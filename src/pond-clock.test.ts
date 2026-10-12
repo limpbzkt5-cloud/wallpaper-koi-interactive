@@ -5,12 +5,12 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT } from "./config";
 describe("PondClock", () => {
   it("initializes with default options and valid Three.js mesh", () => {
     const clock = new PondClock();
-    expect(clock.options.enabled).toBe(true);
+    expect(clock.options.enabled).toBe(false);
     expect(clock.options.mode).toBe("submerged");
     expect(clock.options.format).toBe("24h");
     expect(clock.options.showSeconds).toBe(false);
     expect(clock.options.opacity).toBe(DEFAULT_CLOCK_OPTIONS.opacity);
-    expect(clock.mesh.visible).toBe(true);
+    expect(clock.mesh.visible).toBe(false);
     expect(clock.mesh.scale.y).toBe(-1); // Inverted Y-scale for right-side up text
     expect(clock.mesh.position.x).toBeCloseTo(CANVAS_WIDTH * 0.5);
     expect(clock.mesh.position.y).toBeCloseTo(CANVAS_HEIGHT * 0.48);
@@ -81,6 +81,7 @@ describe("PondClock", () => {
 
   it("formats time and updates without errors across weather presets", () => {
     const clock = new PondClock();
+    clock.setEnabled(true);
     const date = new Date("2026-10-12T19:08:45");
 
     clock.setFormat("24h");
@@ -99,6 +100,7 @@ describe("PondClock", () => {
 
   it("updates fluid wave time and ripple wave uniforms cleanly", () => {
     const clock = new PondClock();
+    clock.setEnabled(true);
     const date = new Date("2026-10-12T19:08:45");
     const mockRipples = {
       instances: [

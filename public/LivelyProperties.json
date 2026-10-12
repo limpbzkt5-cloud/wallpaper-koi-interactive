@@ -139,7 +139,7 @@
   },
   "clock_enabled": {
     "type": "checkbox",
-    "value": true,
+    "value": false,
     "text": "Display Pond Clock"
   },
   "clock_mode": {

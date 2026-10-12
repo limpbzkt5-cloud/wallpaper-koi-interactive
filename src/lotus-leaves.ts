@@ -129,6 +129,10 @@ interface LotusLeafMesh {
   group: THREE.Group;
   shadowMesh: THREE.Mesh;
   geometries: THREE.BufferGeometry[];
+  baseLeafPositions: Float32Array;
+  baseVeinPositions: Float32Array;
+  leafPositionAttr: THREE.BufferAttribute;
+  veinPositionAttr: THREE.BufferAttribute;
 }
 
 interface LotusFlowerMesh {
@@ -139,12 +143,15 @@ interface LotusFlowerMesh {
 interface LeafDynamicState {
   bob: number;
   bobVel: number;
+  pitch: number;
+  pitchVel: number;
   tilt: number;
   tiltVel: number;
   pushX: number;
   pushY: number;
   pushVelX: number;
   pushVelY: number;
+  isDeformed: boolean;
 }
 
 export class LotusLeavesPass {
@@ -235,13 +242,15 @@ export class LotusLeavesPass {
     const visibleFlowerCount = LOTUS.visibleFlowerCount;
     const shadowOffset = LOTUS.shadow.offset;
 
-    // Damped harmonic oscillator constants
-    const kBob = 52.0;
-    const cBob = 5.8;
-    const kTilt = 60.0;
-    const cTilt = 7.0;
-    const kPush = 28.0;
-    const cPush = 6.2;
+    // Physical harmonic spring constants for tranquil water floating & wave glide dynamics
+    const kBob = 18.0;
+    const cBob = 5.6;
+    const kPitch = 18.0;
+    const cPitch = 5.6;
+    const kTilt = 14.0;
+    const cTilt = 4.5;
+    const kPush = 4.2;
+    const cPush = 2.4;
 
     const rippleInstances = ripples
       ? ("instances" in ripples ? ripples.instances : ripples)
@@ -257,15 +266,19 @@ export class LotusLeavesPass {
       const dyn = this.leafDynamics[leafIndex] ?? {
         bob: 0,
         bobVel: 0,
+        pitch: 0,
+        pitchVel: 0,
         tilt: 0,
         tiltVel: 0,
         pushX: 0,
         pushY: 0,
         pushVelX: 0,
         pushVelY: 0,
+        isDeformed: false,
       };
 
       let bobAcc = -kBob * dyn.bob - cBob * dyn.bobVel;
+      let pitchAcc = -kPitch * dyn.pitch - cPitch * dyn.pitchVel;
       let tiltAcc = -kTilt * dyn.tilt - cTilt * dyn.tiltVel;
       let pushAccX = -kPush * dyn.pushX - cPush * dyn.pushVelX;
       let pushAccY = -kPush * dyn.pushY - cPush * dyn.pushVelY;
@@ -275,12 +288,15 @@ export class LotusLeavesPass {
       const currentCenterX = placement.x + dyn.pushX;
       const currentCenterY = placement.y + dyn.pushY;
 
+      let dominantDirX = 0;
+      let dominantDirY = 0;
+      let maxWaveStrength = 0;
+
       if (rippleInstances && Array.isArray(rippleInstances)) {
         for (let i = 0; i < rippleInstances.length; i++) {
           const rip = rippleInstances[i];
           if (!rip || !rip.alive || rip.age < 0) continue;
 
-          // Compute ripple wavefront propagation
           const startRadius = rip.type === "touch" ? 4 : rip.type === "mouth" ? 1.2 : 0.8;
           const expansionSpeed = rip.type === "touch" ? 62 : rip.type === "mouth" ? 17 : 30;
           const lifetime = rip.type === "touch" ? 2.2 : rip.type === "mouth" ? 0.9 : 1.25;
@@ -290,26 +306,44 @@ export class LotusLeavesPass {
           const dy = currentCenterY - rip.center.y;
           const dist = Math.hypot(dx, dy);
 
-          const waveBand = 26.0;
-          const distToWavefront = Math.abs(dist - waveRadius);
-
-          if (distToWavefront < leafRadius + waveBand && rip.age < lifetime) {
-            const waveProximity = Math.exp(-Math.pow(distToWavefront / waveBand, 2));
+          const waveBand = 24.0;
+          // Check if ripple wavefront intersects the leaf disc
+          if (Math.abs(dist - waveRadius) < leafRadius + waveBand && rip.age < lifetime) {
             const lifeRemaining = Math.max(0, 1 - rip.age / lifetime);
-            const typeWeight = rip.type === "touch" ? 1.6 : rip.type === "mouth" ? 0.8 : 0.4;
-            const waveForce = rip.strength * waveProximity * lifeRemaining * typeWeight;
+            const typeWeight = rip.type === "touch" ? 1.0 : rip.type === "mouth" ? 0.35 : 0.15;
+            const ripStrength = rip.strength * lifeRemaining * typeWeight;
 
-            if (waveForce > 0.008) {
-              bobAcc += waveForce * 125.0;
-
+            if (ripStrength > 0.003) {
               const safeDist = Math.max(dist, 1.0);
               const nx = dx / safeDist;
               const ny = dy / safeDist;
 
-              pushAccX += nx * waveForce * 28.0;
-              pushAccY += ny * waveForce * 28.0;
+              if (ripStrength > maxWaveStrength) {
+                maxWaveStrength = ripStrength;
+                dominantDirX = nx;
+                dominantDirY = ny;
+              }
 
-              const torque = (nx * 0.75 - ny * 0.65) * waveForce * 16.0;
+              // Evaluate progressive traveling phase: Near edge (hit first) vs Far edge (hit second)
+              const nearDist = dist - leafRadius;
+              const farDist = dist + leafRadius;
+              const nearProximity = Math.exp(-Math.pow((nearDist - waveRadius) / waveBand, 2));
+              const farProximity = Math.exp(-Math.pow((farDist - waveRadius) / waveBand, 2));
+              const centerProximity = Math.exp(-Math.pow((dist - waveRadius) / waveBand, 2));
+
+              // Buoyant lift on wave crest
+              bobAcc += centerProximity * ripStrength * 22.0;
+
+              // Wave slope: near edge rises first, then far edge
+              const slope = nearProximity - farProximity;
+              pitchAcc += slope * ripStrength * 22.0;
+
+              // Wave glide: momentum carries the leaf along with the traveling wave front
+              pushAccX += nx * centerProximity * ripStrength * 36.0;
+              pushAccY += ny * centerProximity * ripStrength * 36.0;
+
+              // Natural gentle rotational sway
+              const torque = (nx * 0.7 - ny * 0.7) * centerProximity * ripStrength * 3.6;
               tiltAcc += torque;
             }
           }
@@ -318,15 +352,29 @@ export class LotusLeavesPass {
 
       // Semi-implicit Euler integration
       dyn.bobVel += bobAcc * dt;
-      dyn.bob = Math.max(0, Math.min(1.4, dyn.bob + dyn.bobVel * dt));
+      dyn.bob = Math.max(0, Math.min(0.35, dyn.bob + dyn.bobVel * dt));
+
+      dyn.pitchVel += pitchAcc * dt;
+      dyn.pitch = Math.max(-0.085, Math.min(0.085, dyn.pitch + dyn.pitchVel * dt));
 
       dyn.tiltVel += tiltAcc * dt;
-      dyn.tilt = Math.max(-0.35, Math.min(0.35, dyn.tilt + dyn.tiltVel * dt));
+      dyn.tilt = Math.max(-0.075, Math.min(0.075, dyn.tilt + dyn.tiltVel * dt));
 
       dyn.pushVelX += pushAccX * dt;
       dyn.pushVelY += pushAccY * dt;
-      dyn.pushX = Math.max(-20, Math.min(20, dyn.pushX + dyn.pushVelX * dt));
-      dyn.pushY = Math.max(-20, Math.min(20, dyn.pushY + dyn.pushVelY * dt));
+      dyn.pushX = Math.max(-14.0, Math.min(14.0, dyn.pushX + dyn.pushVelX * dt));
+      dyn.pushY = Math.max(-14.0, Math.min(14.0, dyn.pushY + dyn.pushVelY * dt));
+
+      // Reset any previous vertex deform buffer so mesh stays 100% pristine and smooth
+      if (dyn.isDeformed) {
+        const leafPosArr = mesh.leafPositionAttr.array as Float32Array;
+        const veinPosArr = mesh.veinPositionAttr.array as Float32Array;
+        leafPosArr.set(mesh.baseLeafPositions);
+        veinPosArr.set(mesh.baseVeinPositions);
+        mesh.leafPositionAttr.needsUpdate = true;
+        mesh.veinPositionAttr.needsUpdate = true;
+        dyn.isDeformed = false;
+      }
 
       const baseCenterX =
         placement.x + Math.sin(time * 0.12 + leaf.phase) * LOTUS.driftX;
@@ -340,24 +388,32 @@ export class LotusLeavesPass {
       const finalCenterX = baseCenterX + dyn.pushX;
       const finalCenterY = baseCenterY + dyn.pushY;
       const finalSway = baseSway + dyn.tilt;
-      const finalScale = basePulse * (1 + dyn.bob * 0.18);
+      const finalScale = basePulse * (1 + dyn.bob * 0.035);
 
       const center = this.leafCenters[leafIndex];
       center.x = finalCenterX;
       center.y = finalCenterY;
 
       mesh.group.position.set(finalCenterX, finalCenterY, 0);
+      // Gentle 3D pitch tilt: when wave hits near edge, leaf tilts up ~1-3 degrees on near edge; reverses when wave exits far edge
+      mesh.group.rotation.x = -dominantDirY * dyn.pitch;
+      mesh.group.rotation.y = dominantDirX * dyn.pitch;
       mesh.group.rotation.z = finalSway;
       mesh.group.scale.setScalar(finalScale);
 
-      const shadowLift = 1 + dyn.bob * 0.85;
+      // Subtle shadow parallax following the gentle wave tilt
+      const shadowLift = 1 + dyn.bob * 0.12;
+      const shadowTiltShiftX = dominantDirX * (dyn.pitch * 3.2);
+      const shadowTiltShiftY = dominantDirY * (dyn.pitch * 3.2);
       mesh.shadowMesh.position.set(
-        finalCenterX + shadowOffset.x * shadowLift,
-        finalCenterY + shadowOffset.y * shadowLift,
+        finalCenterX + shadowOffset.x * shadowLift - shadowTiltShiftX,
+        finalCenterY + shadowOffset.y * shadowLift - shadowTiltShiftY,
         0,
       );
+      mesh.shadowMesh.rotation.x = -dominantDirY * dyn.pitch;
+      mesh.shadowMesh.rotation.y = dominantDirX * dyn.pitch;
       mesh.shadowMesh.rotation.z = finalSway;
-      mesh.shadowMesh.scale.setScalar(finalScale * 1.02);
+      mesh.shadowMesh.scale.setScalar(finalScale * 1.01);
     }
 
     for (const [flowerIndex, mesh] of this.flowers.entries()) {
@@ -378,7 +434,7 @@ export class LotusLeavesPass {
         center.y + flower.offsetY,
         0,
       );
-      const flowerScale = 1 + (dyn ? dyn.bob * 0.16 : 0);
+      const flowerScale = 1 + (dyn ? dyn.bob * 0.12 : 0);
       mesh.mesh.scale.setScalar(flowerScale);
       mesh.mesh.rotation.z =
         Math.sin(time * 0.12 + leaf.phase) * 0.04 + (dyn ? dyn.tilt * 0.75 : 0);
@@ -426,10 +482,20 @@ export class LotusLeavesPass {
       group.add(leafMesh, veins);
       this.group.add(group);
       this.shadowGroup.add(shadowMesh);
+
+      const leafPositionAttr = leafGeometry.getAttribute("position") as THREE.BufferAttribute;
+      const veinPositionAttr = veinGeometry.getAttribute("position") as THREE.BufferAttribute;
+      const baseLeafPositions = new Float32Array(leafPositionAttr.array);
+      const baseVeinPositions = new Float32Array(veinPositionAttr.array);
+
       leaves.push({
         group,
         shadowMesh,
         geometries: [leafGeometry, shadowGeometry, veinGeometry],
+        baseLeafPositions,
+        baseVeinPositions,
+        leafPositionAttr,
+        veinPositionAttr,
       });
     }
     this.leaves = leaves;
@@ -438,12 +504,15 @@ export class LotusLeavesPass {
       this.leafDynamics.push({
         bob: 0,
         bobVel: 0,
+        pitch: 0,
+        pitchVel: 0,
         tilt: 0,
         tiltVel: 0,
         pushX: 0,
         pushY: 0,
         pushVelX: 0,
         pushVelY: 0,
+        isDeformed: false,
       });
     }
 

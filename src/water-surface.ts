@@ -200,7 +200,7 @@ const fragmentShader = /* glsl */ `
     vec2 displacement = vec2(
       sin(pixel.y * 0.051 + uTime * 0.31) + sin(pixel.y * 0.017 - uTime * 0.19),
       cos(pixel.x * 0.043 - uTime * 0.23) + sin(pixel.x * 0.014 + uTime * 0.16)
-    ) * 1.6 / uResolution;
+    ) * 0.13 / uResolution;
 
     for (int index = 0; index < MAX_RIPPLES; index++) {
       if (index >= uRippleCount) break;

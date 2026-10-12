@@ -237,7 +237,7 @@
         "order": 22,
         "text": "Display Pond Clock",
         "type": "bool",
-        "value": true
+        "value": false
       },
       "clock_mode": {
         "condition": "clock_enabled.value === true",

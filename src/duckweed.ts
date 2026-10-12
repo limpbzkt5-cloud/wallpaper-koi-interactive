@@ -9,7 +9,6 @@ import {
 } from "./config";
 import {
   buildDuckweedBuffers,
-  DUCKWEED_RIPPLE_PEAK_SCALE,
   type DuckweedLayerBuffers,
   type DuckweedLeafShape,
 } from "./duckweed-geometry";
@@ -55,10 +54,12 @@ function transformChunk(shadow: boolean): string {
   return /* glsl */ `
     vec4 dwPatch = uPatches[int(patchIndex + 0.5)];
     vec2 dwWorld = dwPatch.xy + duckweedRotate(position.xy, dwPatch.z);
+    float dwClampedLift = 0.0;
     if (uRippleCount > 0) {
       vec2 dwLeaf = dwPatch.xy + duckweedRotate(leafCenter, dwPatch.z);
       vec2 dwPush = vec2(0.0);
       float dwSpin = 0.0;
+      float dwLift = 0.0;
       float dwWidth = max(uBandWidth, 0.001);
       float dwFalloffDistance = max(uFalloffDistance, 0.001);
       for (int i = 0; i < DUCKWEED_MAX_RIPPLES; i++) {
@@ -75,14 +76,19 @@ function transformChunk(shadow: boolean): string {
         float fade = remaining * remaining;
         float falloff = 1.0 / (1.0 + d / dwFalloffDistance);
         float amp = uStrength * uRippleStrength[i] * fade * falloff;
-        dwPush += dir * amp * env * (x / dwWidth) * ${DUCKWEED_RIPPLE_PEAK_SCALE.toFixed(2)};
-        dwSpin += amp * env * uSpin;
+        float waveGlide = env * (0.85 + 0.35 * clamp(x / dwWidth, -1.0, 1.0));
+        dwPush += dir * amp * waveGlide * 3.8;
+        dwSpin += amp * env * (uSpin * 1.5);
+        dwLift += amp * env * 0.32;
       }
       float dwPushLength = length(dwPush);
-      if (dwPushLength > uMaxPush) dwPush *= uMaxPush / dwPushLength;
-      dwWorld = dwLeaf + duckweedRotate(dwWorld - dwLeaf, dwSpin * leafSign) + dwPush;
+      float maxPush = uMaxPush * 1.8;
+      if (dwPushLength > maxPush) dwPush *= maxPush / dwPushLength;
+      dwClampedLift = clamp(dwLift, 0.0, 0.45);
+      vec2 localLeaf = (dwWorld - dwLeaf) * (1.0 + dwClampedLift);
+      dwWorld = dwLeaf + duckweedRotate(localLeaf, dwSpin * leafSign) + dwPush;
     }
-    ${shadow ? "dwWorld += uShadowOffset;" : ""}
+    ${shadow ? "dwWorld += uShadowOffset * (1.0 + dwClampedLift * 0.45);" : ""}
     vec3 transformed = vec3(dwWorld, position.z);
   `;
 }
@@ -288,7 +294,7 @@ export class DuckweedPass {
       );
       this.typeWeights[typeIndex] =
         type === "touch"
-          ? response.touchWeight
+          ? response.touchWeight * 1.5
           : type === "mouth"
             ? response.mouthWeight
             : response.rainWeight;

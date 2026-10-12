@@ -40,6 +40,46 @@ describe("LotusLeavesPass interactive ripple dynamic response", () => {
     expect(dyn.bob).toBeLessThan(0.05);
     expect(Math.abs(settledScale - initialScale)).toBeLessThan(0.05);
   });
+
+  it("glides outward along with the traveling wave when a user click ripple passes, then relaxes back", () => {
+    const lotus = new LotusLeavesPass();
+    lotus.update(0);
+
+    const leafCenter = (lotus as any).leafCenters[0];
+    // Place a touch ripple 60px to the left of the leaf
+    const rippleOriginX = leafCenter.x - 60;
+    const rippleOriginY = leafCenter.y;
+
+    // A touch ripple expands at speed 62 px/s.
+    // At age ~0.9s, radius = 4 + 62 * 0.9 = 59.8px, hitting the leaf from the left.
+    const ripple: RippleInstance = {
+      center: { x: rippleOriginX, y: rippleOriginY },
+      age: 0.9,
+      strength: 1.0,
+      type: "touch",
+      alive: true,
+    };
+
+    // Simulate wave propagation from t=0.7 to t=1.4 as wave sweeps across the leaf
+    for (let t = 0.7; t <= 1.4; t += 0.05) {
+      ripple.age = t;
+      lotus.update(t, [ripple]);
+    }
+
+    const dynGlided = (lotus as any).leafDynamics[0];
+    // The leaf should have glided noticeably to the right along with the wave
+    expect(dynGlided.pushX).toBeGreaterThan(1.5);
+    expect(dynGlided.pushVelX).toBeGreaterThan(0);
+
+    // Advance time until the wave passes and the leaf lazily glides back to rest
+    for (let t = 1.45; t <= 5.5; t += 0.05) {
+      lotus.update(t, []);
+    }
+
+    const dynSettled = (lotus as any).leafDynamics[0];
+    expect(Math.abs(dynSettled.pushX)).toBeLessThan(0.2);
+    expect(Math.abs(dynSettled.pushVelX)).toBeLessThan(0.2);
+  });
 });
 
 describe("TinyFishSchools species diversity & ambient background constraints", () => {

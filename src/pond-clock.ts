@@ -17,7 +17,7 @@ export interface ClockOptions {
 }
 
 export const DEFAULT_CLOCK_OPTIONS: ClockOptions = {
-  enabled: true,
+  enabled: false,
   mode: "submerged",
   format: "24h",
   showSeconds: false,
@@ -59,10 +59,10 @@ const clockFragmentShader = /* glsl */ `
   varying vec2 vWorldPos;
 
   void main() {
-    // 1. Natural fluid harmonic stream undulation
+    // 1. Subtle fluid undulation (kept subpixel so clock glyphs stay sharp)
     vec2 flowOffset = vec2(
-      sin(vUv.y * 14.0 + uTime * 1.85) * 0.012 + sin((vUv.x + vUv.y) * 22.0 - uTime * 1.35) * 0.007,
-      cos(vUv.x * 12.0 - uTime * 1.60) * 0.010 + cos((vUv.x - vUv.y) * 18.0 + uTime * 1.20) * 0.006
+      sin(vUv.y * 14.0 + uTime * 1.85) * 0.0012 + sin((vUv.x + vUv.y) * 22.0 - uTime * 1.35) * 0.0007,
+      cos(vUv.x * 12.0 - uTime * 1.60) * 0.0010 + cos((vUv.x - vUv.y) * 18.0 + uTime * 1.20) * 0.0006
     );
 
     // 2. Interactive ripple wave deformation from passing koi ripples
@@ -78,7 +78,7 @@ const clockFragmentShader = /* glsl */ `
       float signedDist = dist - radius;
       float waveBand = exp(-abs(signedDist) * 0.20) * clamp(1.0 - age / 3.0, 0.0, 1.0) * strength;
       vec2 radialDir = delta / max(dist, 0.001);
-      rippleOffset += radialDir * waveBand * 0.024;
+      rippleOffset += radialDir * waveBand * 0.0025;
     }
 
     vec2 finalUv = clamp(vUv + flowOffset + rippleOffset, vec2(0.001), vec2(0.999));
@@ -212,6 +212,7 @@ export class PondClock {
 
     // Invert Y axis because camera coordinate system has top = 0 and bottom = CANVAS_HEIGHT (Y increases downwards)
     this.mesh.scale.set(1, -1, 1);
+    this.mesh.visible = this.options.enabled;
 
     this.updatePosition();
     this.renderCanvas(new Date(), "sunny");
