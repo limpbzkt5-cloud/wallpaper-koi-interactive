@@ -30,7 +30,7 @@
     "type": "checkbox",
     "value": true,
     "text": "Display Pond Clock",
-    "help": "Toggle the Apple-inspired liquid frosted glass clock."
+    "help": "Toggle the frosted glass pond clock."
   },
   "clock_mode": {
     "type": "dropdown",
