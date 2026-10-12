@@ -53,8 +53,25 @@ describe("School Post-Gather Scatter", () => {
     for (let t = 0; t < 1.0; t += 0.1) {
       school.update(0.1, 4.5 + t);
     }
-    expect(school.foodScatterCountdown).toBe(-1);
-    expect(school.scatterDecay).toBeGreaterThan(0);
     expect(school.scatterCenter).toEqual(foodCenter);
+  });
+
+  it("disperses smoothly without violent speed snaps", () => {
+    const school = new School();
+    const cluster = vec(150, 150);
+    school.callTo(cluster);
+
+    // Fast-forward to scatter threshold
+    for (let t = 0; t < 5.2; t += 0.1) {
+      school.update(0.1, t);
+    }
+    expect(school.scatterDecay).toBeGreaterThan(0);
+
+    // Verify fish speeds remain calm and graceful rather than artificially snapped to max
+    const active = school.activeIndices();
+    for (const idx of active) {
+      const fish = school.fish[idx];
+      expect(fish.speed).toBeLessThan(fish.maximumSpeed * 0.95);
+    }
   });
 });

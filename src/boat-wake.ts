@@ -55,7 +55,6 @@ export class BoatWakeTrail {
   private readonly foamParticles: FoamParticle[] = [];
 
   private lastEmitPos: Vec2 | null = null;
-  private bowSplashAccumulator = 0;
   private sternChurnAccumulator = 0;
 
   // Pre-allocated flat buffers for dynamic GPU streaming
@@ -127,7 +126,7 @@ export class BoatWakeTrail {
   public update(
     dt: number,
     _boatPos: Vec2,
-    bowPos: Vec2,
+    _bowPos: Vec2,
     sternPos: Vec2,
     velocity: Vec2,
     scale: number,
@@ -199,33 +198,6 @@ export class BoatWakeTrail {
           age: 0,
           maxAge: 0.95 + Math.random() * 0.45,
           isStern: true,
-        });
-      }
-
-      // 3. BOW SPLASH: Crisp, frothing prow water displacement (shifted to bow waterline)
-      this.bowSplashAccumulator += dt * Math.min(currentSpeed * 0.9, 16.0);
-      while (this.bowSplashAccumulator >= 1.0) {
-        this.bowSplashAccumulator -= 1.0;
-        if (this.foamParticles.length >= MAX_FOAM_PARTICLES) {
-          this.foamParticles.shift();
-        }
-
-        const sprayAngle = (Math.random() - 0.5) * 0.8;
-        const spraySpeed = (1.2 + Math.random() * 3.0) * scale;
-        const sprayDir = vec(
-          fwd.x * Math.cos(sprayAngle) - fwd.y * Math.sin(sprayAngle),
-          fwd.x * Math.sin(sprayAngle) + fwd.y * Math.cos(sprayAngle),
-        );
-
-        this.foamParticles.push({
-          x: bowPos.x + (Math.random() - 0.5) * (2.2 * scale),
-          y: bowPos.y + (Math.random() - 0.5) * (2.0 * scale),
-          vx: sprayDir.x * spraySpeed,
-          vy: sprayDir.y * spraySpeed,
-          size: (2.4 + Math.random() * 2.6) * scale,
-          age: 0,
-          maxAge: 0.35 + Math.random() * 0.22,
-          isStern: false,
         });
       }
     } else {

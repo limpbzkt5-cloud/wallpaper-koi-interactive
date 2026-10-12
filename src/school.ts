@@ -39,6 +39,7 @@ export class School {
   public clickScatterCountdown = -1;
   public foodScatterCountdown = -1;
   public scatterDecay = 0;
+  public scatterDuration = 6.0;
   public scatterCenter: Vec2 | null = null;
   private lastFoodPos: Vec2 | null = null;
   private hadFoodPellets = false;
@@ -638,7 +639,8 @@ export class School {
    */
   public triggerClusterScatter(center?: Vec2): void {
     this.targetActive = false;
-    this.scatterDecay = 4.5; // Dispersal forces remain active for 4.5 seconds
+    this.scatterDuration = 6.0;
+    this.scatterDecay = this.scatterDuration;
     this.scatterCenter = center ? { ...center } : null;
 
     const active = this.activeIndices();
@@ -655,23 +657,13 @@ export class School {
       clusterCenter = vec(sumX / active.length, sumY / active.length);
     }
 
+    // Gracefully wake any hovering fish into a calm swimming glide,
+    // without snapping heading or speed so the animation remains buttery smooth
     for (const index of active) {
       const fish = this.fish[index];
-      const fromCenter = sub(fish.position, clusterCenter);
-      const dist = length(fromCenter);
-
-      let scatterHeading: number;
-      if (dist > 1.5) {
-        const baseAngle = Math.atan2(fromCenter.y, fromCenter.x);
-        scatterHeading = baseAngle + this.random.range(-0.55, 0.55);
-      } else {
-        scatterHeading = this.random.range(-Math.PI, Math.PI);
+      if (fish.state === SwimState.Hover || fish.state === SwimState.Coast) {
+        this.enterState(fish, SwimState.Glide);
       }
-
-      fish.heading = scatterHeading;
-      fish.angularVelocity = this.random.range(-1.2, 1.2);
-      fish.speed = fish.maximumSpeed * 0.95;
-      this.enterState(fish, SwimState.Glide);
     }
   }
 
@@ -973,7 +965,13 @@ export class School {
       return normalize(add(forward, mul(pivotDirection, 3.2)), forward);
     }
 
-    const scatterIntensity = clamp(this.scatterDecay / 4.5, 0, 1);
+    // Smooth, peaceful post-gather dispersal envelope:
+    // Uses a sine bell curve starting at 0, smoothly peaking at 0.48, and fading gracefully to 0
+    let scatterIntensity = 0;
+    if (this.scatterDecay > 0 && this.scatterDuration > 0) {
+      const progress = clamp(1.0 - this.scatterDecay / this.scatterDuration, 0, 1);
+      scatterIntensity = Math.sin(Math.PI * progress) * 0.48;
+    }
 
     if (fish.state === SwimState.Hover) {
       const drift =
@@ -984,7 +982,7 @@ export class School {
       const wander =
         Math.sin(time * 0.55 + fish.wanderSeed) * 0.62 +
         Math.cos(time * 0.23 + fish.wanderSeed * 1.3) * 0.38;
-      const wanderWeight = 0.62 + 0.85 * scatterIntensity;
+      const wanderWeight = 0.62 + 0.30 * scatterIntensity;
       steering = add(steering, mul(fromAngle(fish.heading + wander), wanderWeight));
     }
 
@@ -1032,20 +1030,20 @@ export class School {
         continue;
       }
 
-      // 2. Normal schooling and depth-weighted separation (dynamically expanded during scatter)
-      const neighbourRadius = 42 + 24 * scatterIntensity;
+      // 2. Normal schooling and depth-weighted separation (dynamically and gently expanded during scatter)
+      const neighbourRadius = 42 + 12 * scatterIntensity;
       if (distance < neighbourRadius) {
         neighbours += 1;
         cohesion = add(cohesion, otherFish.position);
         alignment = add(alignment, normalize(otherFish.velocity, forward));
 
-        const comfortRadius = 26 + 32 * scatterIntensity;
-        const closeRadius = 14 + 14 * scatterIntensity;
+        const comfortRadius = 26 + 10 * scatterIntensity;
+        const closeRadius = 14 + 5 * scatterIntensity;
         if (distance < comfortRadius && deltaDepth < 0.22) {
           const depthWeight = Math.pow(Math.max(0, 1 - deltaDepth / 0.22), 2);
           const linearPush = (comfortRadius - distance) / comfortRadius;
           const emergencyPush = closeRadius / Math.max(distance, 2.5);
-          const pushMagnitude = (linearPush + emergencyPush * 0.75) * depthWeight * (1 + 1.6 * scatterIntensity);
+          const pushMagnitude = (linearPush + emergencyPush * 0.75) * depthWeight * (1 + 0.35 * scatterIntensity);
           separation = add(separation, mul(normalize(offset, forward), pushMagnitude));
         }
       }
@@ -1054,22 +1052,23 @@ export class School {
     if (neighbours > 0) {
       cohesion = normalize(sub(mul(cohesion, 1 / neighbours), fish.position), forward);
       alignment = normalize(alignment, forward);
-      const cohesionWeight = 0.22 * (1.0 - 0.90 * scatterIntensity);
-      const alignmentWeight = 0.38 * (1.0 - 0.40 * scatterIntensity);
-      const sepWeight = 3.2 + 4.5 * scatterIntensity;
+      const cohesionWeight = 0.22 * (1.0 - 0.40 * scatterIntensity);
+      const alignmentWeight = 0.38 * (1.0 - 0.20 * scatterIntensity);
+      const sepWeight = 3.2 + 1.1 * scatterIntensity;
       steering = add(steering, mul(cohesion, cohesionWeight));
       steering = add(steering, mul(alignment, alignmentWeight));
       steering = add(steering, mul(separation, sepWeight));
     } else if (length(separation) > 0.001) {
-      steering = add(steering, mul(separation, 3.2 + 4.5 * scatterIntensity));
+      steering = add(steering, mul(separation, 3.2 + 1.1 * scatterIntensity));
     }
 
-    // 3. Radial dispersal away from cluster center
+    // 3. Smooth, gentle radial guidance away from cluster center
     if (this.scatterCenter && scatterIntensity > 0.01) {
       const fromCenter = sub(fish.position, this.scatterCenter);
       const dist = length(fromCenter);
-      if (dist < 160) {
-        const push = (1.0 - dist / 160) * scatterIntensity * 4.2;
+      if (dist < 140) {
+        const falloff = 1.0 - dist / 140;
+        const push = falloff * scatterIntensity * 1.2;
         steering = add(steering, mul(normalize(fromCenter, forward), push));
       }
     }
