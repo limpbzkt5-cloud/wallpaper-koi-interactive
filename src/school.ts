@@ -56,6 +56,7 @@ export class School {
     [FishMutation.Ishmael]: true,
     [FishMutation.Serene]: true,
     [FishMutation.Astraeus]: true,
+    [FishMutation.Abyssal]: true,
   };
   public visitorCountdown = 60;
   public cycleIntervalSeconds = 120;

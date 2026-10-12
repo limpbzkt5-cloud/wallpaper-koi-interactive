@@ -50,4 +50,17 @@ describe("Mutation Max Cap Invariant", () => {
     school.enforceMutationCaps();
     expect(school.countMutation(FishMutation.Frozen)).toBe(school.maxPerMutation);
   });
+
+  it("successfully transforms fish to Abyssal mutation and verifies definition", () => {
+    const school = new School();
+    for (let i = 0; i < school.count; i += 1) {
+      school.fish[i].applyMutation(FishMutation.None);
+    }
+    school.transformRandomFish(FishMutation.Abyssal);
+    expect(school.countMutation(FishMutation.Abyssal)).toBe(1);
+
+    const abyssalFish = school.fish.find((f) => f.mutation === FishMutation.Abyssal);
+    expect(abyssalFish).toBeDefined();
+    expect(abyssalFish?.mutation).toBe(FishMutation.Abyssal);
+  });
 });

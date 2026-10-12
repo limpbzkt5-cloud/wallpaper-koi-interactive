@@ -3,6 +3,7 @@
   "description": "Interactive Procedural Koi Pond with real-time water ripples, responsive fish, changing weather presets, and ambient sound.",
   "file": "index.html",
   "general": {
+    "supportsaudioprocessing": true,
     "properties": {
       "koicount": {
         "condition": "",
@@ -232,6 +233,13 @@
         "type": "bool",
         "value": true
       },
+      "allow_abyssal": {
+        "condition": "",
+        "order": 22,
+        "text": "Allow Abyssal Mutation",
+        "type": "bool",
+        "value": true
+      },
       "clock_enabled": {
         "condition": "",
         "order": 22,
@@ -320,6 +328,55 @@
         "text": "Clock Position",
         "type": "combo",
         "value": "center"
+      },
+      "boat_scale": {
+        "condition": "",
+        "fraction": false,
+        "max": 200,
+        "min": 0,
+        "order": 28,
+        "precision": 1,
+        "step": 5,
+        "text": "Pixel Wooden Boat Scale (%)",
+        "type": "slider",
+        "value": 100
+      },
+      "boat_speed": {
+        "condition": "boat_scale.value > 0",
+        "fraction": false,
+        "max": 200,
+        "min": 0,
+        "order": 29,
+        "precision": 1,
+        "step": 5,
+        "text": "Boat Orbit Speed (%)",
+        "type": "slider",
+        "value": 100
+      },
+      "boat_position": {
+        "condition": "boat_scale.value > 0",
+        "options": [
+          {
+            "label": "Right Pond (Scenic)",
+            "value": "right"
+          },
+          {
+            "label": "Left Pond",
+            "value": "left"
+          },
+          {
+            "label": "Top Right",
+            "value": "top-right"
+          },
+          {
+            "label": "Bottom Center",
+            "value": "bottom-center"
+          }
+        ],
+        "order": 29,
+        "text": "Boat Anchor Position",
+        "type": "combo",
+        "value": "right"
       }
     },
     "supportproperties": true

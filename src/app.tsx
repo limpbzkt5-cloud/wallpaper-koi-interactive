@@ -4,7 +4,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { AUDIO } from "./audio-config";
+import { AUDIO, AUDIO_TRACKS } from "./audio-config";
 import {
   CANVAS,
   CANVAS_HEIGHT,
@@ -15,7 +15,8 @@ import {
 } from "./config";
 import { FishRenderer } from "./fish-renderer";
 import { createFrameLimiter } from "./frame-limiter";
-import { clamp, vec } from "./math";
+import { add, clamp, type Vec2, vec } from "./math";
+import type { BoatInteractionZone } from "./pixel-boat";
 import {
   effectiveFrameRate,
   frameRateOption,
@@ -71,6 +72,7 @@ const TARGET_MUTATION_PRESETS: FishMutation[] = [
   FishMutation.Ishmael,
   FishMutation.Serene,
   FishMutation.Astraeus,
+  FishMutation.Abyssal,
 ];
 
 function parseTargetMutation(val: any): FishMutation {
@@ -93,6 +95,7 @@ function parseTargetMutation(val: any): FishMutation {
     if (lower.includes("ishmael")) return FishMutation.Ishmael;
     if (lower.includes("serene")) return FishMutation.Serene;
     if (lower.includes("astraeus")) return FishMutation.Astraeus;
+    if (lower.includes("abyssal")) return FishMutation.Abyssal;
   }
   return FishMutation.None;
 }
@@ -134,6 +137,7 @@ export function App() {
   const ambientAudioLoadingRef = useRef<Promise<void> | null>(null);
   const runtimeRef = useRef<PondRuntime | null>(null);
   const soundEnabledRef = useRef<boolean>(AUDIO.defaultEnabled);
+  const currentTrackIndexRef = useRef<number>(0);
   const [performancePrefs, setPerformancePrefs] =
     useState<PerformancePrefs>(loadPerformancePrefs);
   const frameRateCap = effectiveFrameRate(performancePrefs, false);
@@ -221,6 +225,39 @@ export function App() {
     }
   }, [startAmbientAudio]);
 
+  const switchAmbientTrack = useCallback(async (trackIndex: number): Promise<void> => {
+    currentTrackIndexRef.current = trackIndex;
+    const track = AUDIO_TRACKS[trackIndex % AUDIO_TRACKS.length];
+    const context = ambientAudioContextRef.current;
+    const gain = ambientAudioGainRef.current;
+    if (!context || !gain) return;
+
+    if (ambientAudioSourceRef.current) {
+      try {
+        ambientAudioSourceRef.current.stop();
+        ambientAudioSourceRef.current.disconnect();
+      } catch {}
+      ambientAudioSourceRef.current = null;
+    }
+
+    try {
+      const response = await fetch(`${import.meta.env.BASE_URL}${track.source}`);
+      if (!response.ok) return;
+      const buffer = await context.decodeAudioData(await response.arrayBuffer());
+      if (context.state === "closed") return;
+
+      const source = context.createBufferSource();
+      source.buffer = buffer;
+      source.loop = true;
+      source.connect(gain);
+      source.start();
+      ambientAudioSourceRef.current = source;
+
+      const now = context.currentTime;
+      gain.gain.setValueAtTime(soundEnabledRef.current ? track.volume : 0, now);
+    } catch {}
+  }, []);
+
   useEffect(() => {
     const unlockAmbientAudio = (): void => {
       window.removeEventListener("pointerdown", unlockAmbientAudio);
@@ -257,6 +294,7 @@ export function App() {
     const renderer = new FishRenderer(canvas);
     const runtime: PondRuntime = { school, renderer, showDebug: false };
     runtimeRef.current = runtime;
+    renderer.pixelBoat.setMusicPlaying(soundEnabledRef.current);
     const activeWeather = getWeatherPreset(settings.meta().weather);
     renderer.setWeatherPreset(activeWeather.id);
     school.setRainIntensity(settings.meta().rain ? 1 : 0);
@@ -285,6 +323,7 @@ export function App() {
     let lastTransformAuroraVal: boolean | null = null;
     let lastTransformBunnyVal: boolean | null = null;
     let lastTransformCrimsonVal: boolean | null = null;
+    let lastTransformAbyssalVal: boolean | null = null;
     const frameLimiter = createFrameLimiter();
 
     const animate = (now: number): void => {
@@ -407,6 +446,7 @@ export function App() {
       } else if (name === "sound") {
         const enabled = Boolean(val);
         setAmbientSoundEnabled(enabled);
+        renderer.pixelBoat.setMusicPlaying(enabled);
       } else if (name === "framerate") {
         const options = ["native", "60", "45", "30"];
         let fps = "native";
@@ -477,6 +517,21 @@ export function App() {
         };
         const pos = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "center");
         renderer.pondClock.setPosition(pos);
+      } else if (name === "boat_scale") {
+        const scalePct = clamp(Number(val), 0, 200);
+        renderer.pixelBoat.setScale(scalePct / 100);
+      } else if (name === "boat_speed") {
+        const speedPct = clamp(Number(val), 0, 200);
+        renderer.pixelBoat.setSpeedMultiplier(speedPct / 100);
+      } else if (name === "boat_position") {
+        const posMap: Record<number | string, "right" | "left" | "top-right" | "bottom-center"> = {
+          0: "right",
+          1: "left",
+          2: "top-right",
+          3: "bottom-center",
+        };
+        const preset = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "right");
+        renderer.pixelBoat.setPositionPreset(preset);
       } else if (name === "scatter") {
         school.scatter();
       } else if (name === "reset") {
@@ -505,6 +560,7 @@ export function App() {
       if (properties.sound !== undefined && properties.sound.value !== undefined) {
         const enabled = Boolean(properties.sound.value);
         setAmbientSoundEnabled(enabled);
+        renderer.pixelBoat.setMusicPlaying(enabled);
       }
       if (properties.framerate !== undefined && properties.framerate.value !== undefined) {
         changeFrameRate(String(properties.framerate.value));
@@ -592,6 +648,15 @@ export function App() {
           school.transformRandomFish(FishMutation.Crimson);
         }
       }
+      if (properties.transform_abyssal !== undefined && properties.transform_abyssal.value !== undefined) {
+        const val = Boolean(properties.transform_abyssal.value);
+        if (lastTransformAbyssalVal === null) {
+          lastTransformAbyssalVal = val;
+        } else if (lastTransformAbyssalVal !== val) {
+          lastTransformAbyssalVal = val;
+          school.transformRandomFish(FishMutation.Abyssal);
+        }
+      }
       if (properties.clock_enabled !== undefined && properties.clock_enabled.value !== undefined) {
         const enabled = toBool(properties.clock_enabled.value);
         renderer.pondClock.setEnabled(enabled);
@@ -630,6 +695,25 @@ export function App() {
         const pos = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "center");
         renderer.pondClock.setPosition(pos);
       }
+      if (properties.boat_scale !== undefined && properties.boat_scale.value !== undefined) {
+        const scalePct = clamp(Number(properties.boat_scale.value), 0, 200);
+        renderer.pixelBoat.setScale(scalePct / 100);
+      }
+      if (properties.boat_speed !== undefined && properties.boat_speed.value !== undefined) {
+        const speedPct = clamp(Number(properties.boat_speed.value), 0, 200);
+        renderer.pixelBoat.setSpeedMultiplier(speedPct / 100);
+      }
+      if (properties.boat_position !== undefined && properties.boat_position.value !== undefined) {
+        const val = properties.boat_position.value;
+        const posMap: Record<number | string, "right" | "left" | "top-right" | "bottom-center"> = {
+          0: "right",
+          1: "left",
+          2: "top-right",
+          3: "bottom-center",
+        };
+        const preset = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "right");
+        renderer.pixelBoat.setPositionPreset(preset);
+      }
     };
 
     // Attach active listener hooks to global bridge
@@ -659,19 +743,84 @@ export function App() {
       window._pendingLivelyProperties = [];
     }
 
-    const handleGlobalPointer = (event: MouseEvent | PointerEvent): void => {
-      // Auto-wake if suspended (e.g. from initial background pause)
-      if (isSuspended) {
-        setSuspended(false);
+    // Register Wallpaper Engine Audio & Media listeners for automatic sync
+    const win = window as any;
+    if (typeof win !== "undefined") {
+      // 1. Audio visualizer frequency listener
+      if (typeof win.wallpaperRegisterAudioListener === "function") {
+        win.wallpaperRegisterAudioListener((audioArray: number[]) => {
+          if (!audioArray || audioArray.length === 0) return;
+          let sum = 0;
+          for (let i = 0; i < audioArray.length; i++) {
+            sum += audioArray[i];
+          }
+          const avg = sum / audioArray.length;
+          const hasExternalAudio = avg > 0.005;
+          renderer.pixelBoat.setSystemAudioPlaying(hasExternalAudio, avg);
+        });
       }
+
+      // 2. Windows Media Session playback status listener (Spotify, YouTube, etc.)
+      if (typeof win.wallpaperRegisterMediaPlaybackListener === "function") {
+        win.wallpaperRegisterMediaPlaybackListener((event: { state: number }) => {
+          const isPlaying = event && event.state === 1;
+          renderer.pixelBoat.setMediaSessionPlaying(isPlaying);
+        });
+      }
+
+      // 3. Windows Media track title & artist listener
+      if (typeof win.wallpaperRegisterMediaPropertiesListener === "function") {
+        win.wallpaperRegisterMediaPropertiesListener((event: { title?: string; artist?: string }) => {
+          if (event && (event.title || event.artist)) {
+            renderer.pixelBoat.setTrackMetadata(event.title || "", event.artist || "");
+          }
+        });
+      }
+    }
+
+    interface ActiveBoatInteraction {
+      startPos: Vec2;
+      zone: BoatInteractionZone;
+      isDraggingBoat: boolean;
+    }
+    let activeBoatInteraction: ActiveBoatInteraction | null = null;
+    let isMouseDown = false;
+    let lastDownTimestamp = 0;
+
+    const getPondPointerPos = (clientX: number, clientY: number): Vec2 => {
       const bounds = canvas.getBoundingClientRect();
       const width = bounds.width > 0 ? bounds.width : (window.innerWidth || CANVAS_WIDTH);
       const height = bounds.height > 0 ? bounds.height : (window.innerHeight || CANVAS_HEIGHT);
       const left = bounds.left || 0;
       const top = bounds.top || 0;
-      const x = clamp(((event.clientX - left) / width) * CANVAS_WIDTH, 0, CANVAS_WIDTH);
-      const y = clamp(((event.clientY - top) / height) * CANVAS_HEIGHT, 0, CANVAS_HEIGHT);
-      school.callTo(vec(x, y));
+      const x = clamp(((clientX - left) / width) * CANVAS_WIDTH, 0, CANVAS_WIDTH);
+      const y = clamp(((clientY - top) / height) * CANVAS_HEIGHT, 0, CANVAS_HEIGHT);
+      return vec(x, y);
+    };
+
+    const handlePointerDown = (event: MouseEvent | PointerEvent): void => {
+      const now = performance.now();
+      if (now - lastDownTimestamp < 25) return; // Prevent double firing when browser sends both pointerdown & mousedown
+      lastDownTimestamp = now;
+
+      isMouseDown = true;
+      if (isSuspended) {
+        setSuspended(false);
+      }
+
+      const pointerPos = getPondPointerPos(event.clientX, event.clientY);
+      const zone = renderer.pixelBoat.hitTest(pointerPos);
+
+      if (zone !== null) {
+        activeBoatInteraction = {
+          startPos: pointerPos,
+          zone,
+          isDraggingBoat: false,
+        };
+        return;
+      }
+
+      school.callTo(pointerPos);
       if (soundEnabledRef.current && ambientAudioContextRef.current?.state === "suspended") {
         void ambientAudioContextRef.current.resume().catch(() => undefined);
       }
@@ -679,20 +828,86 @@ export function App() {
 
     let lastMoveTime = 0;
     const handlePointerMove = (event: MouseEvent | PointerEvent): void => {
-      if (event.buttons === 0 && event.type !== "touchmove") return;
+      if (!isMouseDown) return;
+
+      const pointerPos = getPondPointerPos(event.clientX, event.clientY);
+
+      if (activeBoatInteraction) {
+        const dist = Math.hypot(
+          pointerPos.x - activeBoatInteraction.startPos.x,
+          pointerPos.y - activeBoatInteraction.startPos.y,
+        );
+        if (dist > 2.0 || activeBoatInteraction.isDraggingBoat) {
+          if (!activeBoatInteraction.isDraggingBoat) {
+            activeBoatInteraction.isDraggingBoat = true;
+            renderer.pixelBoat.startDrag(pointerPos);
+          }
+          renderer.pixelBoat.updateDrag(pointerPos, (pos) => {
+            school.ripples.trigger("mouth", pos);
+          });
+          return;
+        }
+      }
+
       const now = performance.now();
       if (now - lastMoveTime < 45) return;
       lastMoveTime = now;
-      handleGlobalPointer(event);
+
+      if (!activeBoatInteraction) {
+        school.callTo(pointerPos);
+      }
     };
 
-    // Attach pointer listeners to both canvas and window for 100% reliable capture
-    canvas.addEventListener("pointerdown", handleGlobalPointer);
-    canvas.addEventListener("mousedown", handleGlobalPointer);
-    canvas.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerdown", handleGlobalPointer);
-    window.addEventListener("mousedown", handleGlobalPointer);
-    window.addEventListener("pointermove", handlePointerMove);
+    const handlePointerUp = (event: MouseEvent | PointerEvent): void => {
+      if (!isMouseDown && !activeBoatInteraction) return;
+      isMouseDown = false;
+
+      if (activeBoatInteraction) {
+        const pointerPos = getPondPointerPos(event.clientX, event.clientY);
+
+        if (activeBoatInteraction.isDraggingBoat) {
+          renderer.pixelBoat.updateDrag(pointerPos);
+          renderer.pixelBoat.endDrag((dropPos) => {
+            school.ripples.trigger("touch", dropPos);
+            school.callTo(dropPos);
+          });
+        } else {
+          // Pure Click interaction
+          if (activeBoatInteraction.zone === "music") {
+            renderer.pixelBoat.triggerButtonFeedback("play");
+            const nextSound = !soundEnabledRef.current;
+            setAmbientSoundEnabled(nextSound);
+            renderer.pixelBoat.setMusicPlaying(nextSound);
+            school.ripples.trigger("mouth", pointerPos);
+            if (nextSound && ambientAudioContextRef.current?.state === "suspended") {
+              void ambientAudioContextRef.current.resume().catch(() => undefined);
+            }
+          } else {
+            // Food Feeder compartment: drop food pellets to feed koi
+            const boatPos = renderer.pixelBoat.options.position;
+            const dropTarget = add(
+              boatPos,
+              vec(
+                22 * (renderer.pixelBoat.facingLeft ? 1 : -1) * renderer.pixelBoat.options.scale,
+                16 * renderer.pixelBoat.options.scale,
+              ),
+            );
+            renderer.pixelBoat.dropFoodPellets(dropTarget, (splashPos) => {
+              school.ripples.trigger("touch", splashPos);
+              school.callTo(splashPos);
+            });
+          }
+        }
+        activeBoatInteraction = null;
+      }
+    };
+
+    canvas.addEventListener("pointerdown", handlePointerDown as EventListener);
+    canvas.addEventListener("mousedown", handlePointerDown as EventListener);
+    window.addEventListener("pointermove", handlePointerMove as EventListener);
+    window.addEventListener("mousemove", handlePointerMove as EventListener);
+    window.addEventListener("pointerup", handlePointerUp as EventListener);
+    window.addEventListener("mouseup", handlePointerUp as EventListener);
 
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.repeat) return;
@@ -737,6 +952,10 @@ export function App() {
         case "KeyA":
           school.transformRandomFish(FishMutation.Astraeus);
           break;
+        case "KeyO":
+        case "Equal":
+          school.transformRandomFish(FishMutation.Abyssal);
+          break;
         case "KeyM":
           school.transformRandomFish(targetMutation);
           break;
@@ -774,6 +993,38 @@ export function App() {
         case "Backquote":
           school.transformRandomFish(FishMutation.None);
           break;
+        case "KeyB": {
+          const boatPos = renderer.pixelBoat.options.position;
+          const dropPos = add(
+            boatPos,
+            vec(14 * renderer.pixelBoat.options.scale, 14 * renderer.pixelBoat.options.scale),
+          );
+          renderer.pixelBoat.dropFoodPellets(dropPos, (splashPos) => {
+            school.ripples.trigger("touch", splashPos);
+            school.callTo(splashPos);
+          });
+          break;
+        }
+        case "KeyN": {
+          const nextIdx = (currentTrackIndexRef.current + 1) % AUDIO_TRACKS.length;
+          currentTrackIndexRef.current = nextIdx;
+          const track = AUDIO_TRACKS[nextIdx];
+          renderer.pixelBoat.setTrackMetadata(track.name);
+          if (soundEnabledRef.current) {
+            void switchAmbientTrack(nextIdx);
+          }
+          break;
+        }
+        case "KeyP": {
+          const prevIdx = (currentTrackIndexRef.current - 1 + AUDIO_TRACKS.length) % AUDIO_TRACKS.length;
+          currentTrackIndexRef.current = prevIdx;
+          const track = AUDIO_TRACKS[prevIdx];
+          renderer.pixelBoat.setTrackMetadata(track.name);
+          if (soundEnabledRef.current) {
+            void switchAmbientTrack(prevIdx);
+          }
+          break;
+        }
         default:
           return;
       }
@@ -793,12 +1044,12 @@ export function App() {
       }
       disconnectEffects();
       resizeObserver.disconnect();
-      canvas.removeEventListener("pointerdown", handleGlobalPointer);
-      canvas.removeEventListener("mousedown", handleGlobalPointer);
-      canvas.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerdown", handleGlobalPointer);
-      window.removeEventListener("mousedown", handleGlobalPointer);
-      window.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerdown", handlePointerDown as EventListener);
+      canvas.removeEventListener("mousedown", handlePointerDown as EventListener);
+      window.removeEventListener("pointermove", handlePointerMove as EventListener);
+      window.removeEventListener("mousemove", handlePointerMove as EventListener);
+      window.removeEventListener("pointerup", handlePointerUp as EventListener);
+      window.removeEventListener("mouseup", handlePointerUp as EventListener);
       window.removeEventListener("keydown", handleKeyDown);
       renderer.dispose();
       runtimeRef.current = null;

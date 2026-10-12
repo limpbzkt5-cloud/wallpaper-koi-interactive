@@ -17,6 +17,7 @@ export enum FishMutation {
   Ishmael = "ishmael",
   Serene = "serene",
   Astraeus = "astraeus",
+  Abyssal = "abyssal",
 }
 
 export type MutationRarity = "Common" | "Special" | "Rare" | "Legendary" | "Mythic";
@@ -278,6 +279,23 @@ export const MUTATION_DEFINITIONS: Record<FishMutation, MutationDefinition> = {
       eye: "#ffedd5",
     },
   },
+  [FishMutation.Abyssal]: {
+    id: FishMutation.Abyssal,
+    name: "Abyssal",
+    rarity: "Mythic",
+    baseWeight: 18,
+    emissive: 1.0,
+    opacity: 1.0,
+    speedScale: 1.18,
+    sizeScale: 1.12,
+    colors: {
+      base: "#0c0fd4",
+      accent: "#7950f2",
+      marking: "#00d2ff",
+      fin: "#4338ca",
+      eye: "#38bdf8",
+    },
+  },
 };
 
 export function rollMutation(
@@ -307,6 +325,7 @@ export function rollMutation(
     FishMutation.Ishmael,
     FishMutation.Serene,
     FishMutation.Astraeus,
+    FishMutation.Abyssal,
   ];
 
   const mutationKeys = allMutations.filter((id) =>
@@ -330,6 +349,7 @@ export function rollMutation(
       if (id === FishMutation.Electric) weight *= 3.5;
       if (id === FishMutation.RainbowCluster) weight *= 2.5;
       if (id === FishMutation.Ishmael) weight *= 3.0; // Great Lake nautical synergy
+      if (id === FishMutation.Abyssal) weight *= 2.0;
     }
     if (weather === "moonlight") {
       if (id === FishMutation.Aurora) weight *= 3.5;
@@ -337,6 +357,7 @@ export function rollMutation(
       if (id === FishMutation.Frozen) weight *= 2.5;
       if (id === FishMutation.Serene) weight *= 3.5; // Polaris night sky synergy
       if (id === FishMutation.Astraeus) weight *= 3.0; // Titan of the night stars
+      if (id === FishMutation.Abyssal) weight *= 3.5; // Deep ocean nocturnal synergy
     }
     if (weather === "mist") {
       if (id === FishMutation.Bunny) weight *= 2.0;
@@ -344,6 +365,7 @@ export function rollMutation(
       if (id === FishMutation.Nuclear) weight *= 2.5;
       if (id === FishMutation.Ishmael) weight *= 2.5;
       if (id === FishMutation.Serene) weight *= 2.5;
+      if (id === FishMutation.Abyssal) weight *= 2.5;
     }
     if (weather === "deep-clear") {
       if (id === FishMutation.Umbra) weight *= 3.5;
@@ -351,6 +373,7 @@ export function rollMutation(
       if (id === FishMutation.RainbowCluster) weight *= 3.5;
       if (id === FishMutation.Serene) weight *= 3.0;
       if (id === FishMutation.Astraeus) weight *= 3.5;
+      if (id === FishMutation.Abyssal) weight *= 4.5; // Oceanic Mariana trench synergy
     }
     if (weather === "sunset") {
       if (id === FishMutation.Umbra) weight *= 2.5;
@@ -364,6 +387,7 @@ export function rollMutation(
     if (weather === "overcast") {
       if (id === FishMutation.Electric) weight *= 2.5;
       if (id === FishMutation.Nuclear) weight *= 3.0;
+      if (id === FishMutation.Abyssal) weight *= 2.5;
     }
 
     weightedList.push({ id, weight });
@@ -507,6 +531,23 @@ export function applyMutationColors(
     markingColor.setRGB(0.75 + 0.15 * duskPulse, 0.52, 0.98); // Ultraviolet twilight violet
     finColor.setRGB(0.58, 0.20, 0.92);
     eyeColor.setRGB(1.0, 0.92, 0.82);
+    return;
+  }
+
+  if (mutation === FishMutation.Abyssal) {
+    // Fisch visual effect: Deep oceanic trench bioluminescence oscillating between bright blue (#0c0fd4) and royal purple (#7950f2)
+    const wave = 0.5 + 0.5 * Math.sin(simulationTime * 1.5);
+    // Dynamic Hue shift: 0.64 (Abyssal sapphire blue ~230°) to 0.76 (Abyssal royal purple/violet ~274°)
+    const hueBase = 0.64 + 0.12 * wave;
+    const hueAccent = 0.76 - 0.12 * wave;
+    baseColor.setHSL(hueBase, 0.95, 0.28 + 0.14 * wave);
+    accentColor.setHSL(hueAccent, 0.95, 0.56 + 0.12 * wave);
+    // Marking: Radiant hydrothermal neon cyan photophores
+    markingColor.setRGB(0.0, 0.82 + 0.18 * wave, 1.0);
+    // Fin: Luminous abyssal indigo-violet
+    finColor.setHSL(0.68 + 0.06 * wave, 0.85, 0.44 + 0.10 * wave);
+    // Eye: Eerie glowing deep-sea photophore eye
+    eyeColor.setRGB(0.35, 0.92, 1.0);
     return;
   }
 

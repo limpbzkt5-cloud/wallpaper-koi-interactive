@@ -26,6 +26,7 @@ import {
   perpendicular,
   sub,
   type Vec2,
+  vec,
 } from "./math";
 import { PondBedPass } from "./pond-bed";
 import { School } from "./school";
@@ -35,6 +36,7 @@ import { WaterSurfacePass } from "./water-surface";
 import { WeatherPass } from "./weather-pass";
 import type { WeatherPresetId } from "./weather";
 import { PondClock, type ClockMode } from "./pond-clock";
+import { PixelBoat } from "./pixel-boat";
 
 const TRIANGLE_FLOAT_CAPACITY = 144_000;
 const LINE_FLOAT_CAPACITY = 18_000;
@@ -261,6 +263,7 @@ export class FishRenderer {
   private currentVisualDepth = 0;
   private previewFamilyIndex: number | null = null;
   public readonly pondClock = new PondClock();
+  public readonly pixelBoat = new PixelBoat();
   private readonly underwaterClockScene = new THREE.Scene();
   private readonly floatingClockScene = new THREE.Scene();
   private activeWeatherId: WeatherPresetId = "sunny";
@@ -310,11 +313,13 @@ export class FishRenderer {
     this.surfaceShadowScene.add(
       this.duckweed.shadowGroup,
       this.butterflies.shadowGroup,
+      this.pixelBoat.shadowGroup,
     );
     this.surfaceObjectScene.add(
       this.duckweed.group,
       this.lotusLeaves.group,
       this.butterflies.group,
+      this.pixelBoat.group,
     );
     this.weatherScene.add(this.weather.mesh);
 
@@ -438,10 +443,12 @@ export class FishRenderer {
     this.surfaceDisturbance.resize(width, height);
     this.waterSurface.resize(width, height);
     this.butterflies.resize(width / oldWidth, height / oldHeight);
+    this.pixelBoat.resize(width / oldWidth, height / oldHeight);
     this.pondClock.updatePosition();
   }
 
   public dispose(): void {
+    this.pixelBoat.dispose();
     this.pondClock.dispose();
     this.underwaterTarget.dispose();
     this.compositeTarget.dispose();
@@ -529,9 +536,26 @@ export class FishRenderer {
     this.waterSurface.update(school, time);
     this.duckweed.update(time, school.ripples);
     this.lotusLeaves.update(time, school.ripples);
-    this.butterflies.update(time);
-
     this.pondClock.update(new Date(), this.activeWeatherId, time, school.ripples);
+    const clockCenter =
+      this.pondClock.options.enabled && this.pondClock.options.mode !== "off"
+        ? vec(this.pondClock.mesh.position.x, this.pondClock.mesh.position.y)
+        : vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);
+
+    this.pixelBoat.update(
+      time,
+      school.ripples,
+      this.activeWeatherId,
+      (splashPos) => {
+        school.ripples.trigger("touch", splashPos);
+        school.callTo(splashPos);
+      },
+      clockCenter,
+      (wakePos) => {
+        school.ripples.trigger("mouth", wakePos);
+      },
+      school,
+    );
 
     this.renderer.setRenderTarget(this.underwaterTarget);
     this.renderer.clear();
@@ -628,7 +652,8 @@ export class FishRenderer {
         fish.mutation === FishMutation.Mythical ||
         fish.mutation === FishMutation.RainbowCluster ||
         fish.mutation === FishMutation.Serene ||
-        fish.mutation === FishMutation.Astraeus;
+        fish.mutation === FishMutation.Astraeus ||
+        fish.mutation === FishMutation.Abyssal;
       const visualDepth = this.visualDepth(fish.depth) * (isLuminescent ? 0.35 : 1.0);
       this.applyDepthColor(target.base, target.base, visualDepth);
       this.applyDepthColor(target.accent, target.accent, visualDepth);
@@ -1103,6 +1128,8 @@ export class FishRenderer {
       this.drawSereneWispsAndStars(fish, appearance);
     } else if (fish.mutation === FishMutation.Astraeus) {
       this.drawAstraeusWispsAndStars(fish, appearance);
+    } else if (fish.mutation === FishMutation.Abyssal) {
+      this.drawAbyssalDepths(fish, appearance);
     }
   }
 
@@ -1908,6 +1935,113 @@ export class FishRenderer {
       const motePulse = 0.5 + 0.5 * Math.sin(motePhase * 1.6);
       this.bodyTriangles.circle(moteCenter, Math.max(0.45, fish.bodyWidth * 0.08 * motePulse), moteColor, 4);
     }
+  }
+
+  private drawAbyssalDepths(fish: Koi, appearance: FishAppearance): void {
+    const abyssalBlue = appearance.base;
+    const abyssalPurple = appearance.accent;
+    const neonCyan = appearance.marking;
+    const photophoreGlow = appearance.eye;
+
+    // 1. Multifaceted bioluminescent dorsal ridge along nodes 1 to 6
+    for (let node = 1; node < 6; node += 1) {
+      const p1 = fish.renderSpine[node];
+      const p2 = fish.renderSpine[node + 1];
+      const tangent = normalize(sub(p1, p2), fromAngle(fish.heading));
+      const normal = perpendicular(tangent);
+      const ridgeW = this.widthAt(fish, node) * 0.35;
+      const wave = Math.sin(fish.swimPhase * 1.5 - node * 0.55) * (ridgeW * 0.22);
+
+      const l1 = add(p1, mul(normal, ridgeW + wave));
+      const r1 = add(p1, mul(normal, -ridgeW + wave));
+      const l2 = add(p2, mul(normal, ridgeW * 0.72));
+      const r2 = add(p2, mul(normal, -ridgeW * 0.72));
+
+      // Alternating deep trench cobalt blue and royal amethyst purple facets
+      const facetColor = node % 2 === 0 ? abyssalPurple : abyssalBlue;
+      this.bodyTriangles.triangle(l1, l2, r2, facetColor);
+      this.bodyTriangles.triangle(l1, r2, r1, facetColor);
+
+      // Central glowing photophore bead along midline
+      const midPoint = lerp(p1, p2, 0.5);
+      const beadRadius = Math.max(0.6, fish.bodyWidth * 0.12);
+      this.bodyTriangles.circle(midPoint, beadRadius, neonCyan, 6);
+      this.bodyTriangles.circle(midPoint, beadRadius * 0.5, photophoreGlow, 4);
+    }
+
+    // 2. Translucent Abyssal Ethereal Veil Ribbons (flowing along nodes 2, 4, 6)
+    const wispNodes = [2, 4, 6];
+    for (let i = 0; i < wispNodes.length; i += 1) {
+      const node = wispNodes[i];
+      const origin = fish.renderSpine[node];
+      const nextNode = Math.min(SPINE_NODES - 1, node + 1);
+      const tangent = normalize(sub(origin, fish.renderSpine[nextNode]), fromAngle(fish.heading));
+      const normal = perpendicular(tangent);
+      const localWidth = this.widthAt(fish, node);
+
+      for (const side of [1, -1]) {
+        const sideNormal = mul(normal, side);
+        const startPoint = add(origin, mul(sideNormal, localWidth * 0.85));
+        const wispLen = fish.bodyLength * (0.46 + i * 0.10);
+        const baseWidth = Math.max(0.72, fish.bodyWidth * 0.24);
+        const waveAmp = fish.bodyWidth * 0.26;
+
+        this.drawEtherealRippleRibbon(
+          startPoint,
+          tangent,
+          normal,
+          side,
+          wispLen,
+          baseWidth,
+          fish.swimPhase,
+          i * 1.20 + (side > 0 ? 0 : 0.9),
+          waveAmp,
+          1.30, // Abyssal wave frequency
+          abyssalPurple,
+          abyssalBlue,
+          neonCyan,
+          photophoreGlow,
+          7,
+        );
+      }
+    }
+
+    // 3. Emitted Deep-Sea Bioluminescent Particles (Fisch wiki: floating particles randomized between blue and purple based on weight)
+    const numParticles = 8;
+    const weightSeed = Math.floor(fish.bodyLength * 0.7);
+    for (let k = 0; k < numParticles; k += 1) {
+      const pPhase = fish.swimPhase * 1.6 + k * ((Math.PI * 2) / numParticles);
+      const trailOffset = (k / numParticles) * fish.bodyLength * 0.75;
+      const spreadX = Math.cos(pPhase) * (fish.bodyWidth * (1.1 + 0.35 * Math.sin(k)));
+      const spreadY = Math.sin(pPhase * 1.25) * (fish.bodyWidth * (0.75 + 0.25 * Math.cos(k)));
+
+      const anchorNode = Math.min(SPINE_NODES - 1, 2 + Math.floor(k * 0.85));
+      const anchor = fish.renderSpine[anchorNode];
+      const prevNode = Math.max(0, anchorNode - 1);
+      const nextNode = Math.min(SPINE_NODES - 1, anchorNode + 1);
+      const tangent = normalize(sub(fish.renderSpine[prevNode], fish.renderSpine[nextNode]), fromAngle(fish.heading));
+      const normal = perpendicular(tangent);
+
+      const px = anchor.x - tangent.x * trailOffset + normal.x * spreadX;
+      const py = anchor.y - tangent.y * trailOffset + normal.y * spreadY;
+
+      // Color randomized between blue and purple based on fish's weight seed and index k
+      const isBlue = (k + weightSeed) % 2 === 0;
+      const particleColor = isBlue ? abyssalBlue : abyssalPurple;
+      const pulseBrightness = 0.5 + 0.5 * Math.sin(pPhase * 2.2);
+      const pRadius = Math.max(0.65, fish.bodyWidth * (0.12 + 0.08 * pulseBrightness));
+
+      this.bodyTriangles.circle({ x: px, y: py }, pRadius, particleColor, 6);
+      this.bodyTriangles.circle({ x: px, y: py }, pRadius * 0.5, isBlue ? neonCyan : photophoreGlow, 4);
+    }
+
+    // 4. Luminous Frontal Lure Photophore (Anglerfish / deep-sea glow at rostrum)
+    const head = fish.renderSpine[0];
+    const headTangent = normalize(sub(fish.renderSpine[0], fish.renderSpine[1]), fromAngle(fish.heading));
+    const lurePoint = add(head, mul(headTangent, fish.bodyWidth * 0.32));
+    const lurePulse = 0.6 + 0.4 * Math.sin(fish.swimPhase * 2.8);
+    this.bodyTriangles.circle(lurePoint, Math.max(0.7, fish.bodyWidth * 0.16 * lurePulse), neonCyan, 6);
+    this.bodyTriangles.circle(lurePoint, Math.max(0.4, fish.bodyWidth * 0.08 * lurePulse), photophoreGlow, 4);
   }
 
   private drawDebug(fish: Koi, appearance: FishAppearance): void {
