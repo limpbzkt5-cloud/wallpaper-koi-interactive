@@ -509,14 +509,7 @@ export function App() {
       } else if (name === "clock_opacity") {
         renderer.pondClock.setOpacity(Number(val) / 100);
       } else if (name === "clock_position") {
-        const posMap: Record<number | string, "center" | "top-right" | "top-left" | "bottom-center"> = {
-          0: "center",
-          1: "top-right",
-          2: "top-left",
-          3: "bottom-center",
-        };
-        const pos = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "center");
-        renderer.pondClock.setPosition(pos);
+        renderer.pondClock.setPosition("center");
       } else if (name === "boat_scale") {
         const scalePct = clamp(Number(val), 0, 200);
         renderer.pixelBoat.setScale(scalePct / 100);
@@ -685,15 +678,7 @@ export function App() {
         renderer.pondClock.setOpacity(Number(properties.clock_opacity.value) / 100);
       }
       if (properties.clock_position !== undefined && properties.clock_position.value !== undefined) {
-        const val = properties.clock_position.value;
-        const posMap: Record<number | string, "center" | "top-right" | "top-left" | "bottom-center"> = {
-          0: "center",
-          1: "top-right",
-          2: "top-left",
-          3: "bottom-center",
-        };
-        const pos = posMap[val] ?? (typeof val === "string" ? (val.toLowerCase() as any) : "center");
-        renderer.pondClock.setPosition(pos);
+        renderer.pondClock.setPosition("center");
       }
       if (properties.boat_scale !== undefined && properties.boat_scale.value !== undefined) {
         const scalePct = clamp(Number(properties.boat_scale.value), 0, 200);

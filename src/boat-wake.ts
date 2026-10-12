@@ -27,7 +27,7 @@ const MAX_WAKE_NODES = 48;
 const MAX_FOAM_PARTICLES = 64;
 
 // Capacity calculation:
-// Each segment between 2 nodes creates 2 quads (1 port ribbon quad + 1 starboard ribbon quad) = 12 vertices.
+// Each segment between 2 nodes creates 2 quads (left half + right half trail ribbon) = 12 vertices.
 // Max ribbon segments = (MAX_WAKE_NODES - 1) * 12 = 47 * 12 = 564 vertices.
 // Foam particles = MAX_FOAM_PARTICLES * 6 = 384 vertices.
 // Total vertices = 564 + 384 = 948 vertices.
@@ -116,14 +116,14 @@ export class BoatWakeTrail {
 
   /**
    * Main per-frame simulation update:
-   * 1. Detect movement and emit V-shaped wake ribbon nodes
-   * 2. Spawn and simulate bow wave splash foam
-   * 3. Spawn and simulate stern propeller / rudder bubbles
+   * 1. Emit continuous trail nodes directly behind the stern along the boat's cruising path
+   * 2. Spawn and simulate trailing stern foam bubbles
+   * 3. Spawn subtle bow water froth
    * 4. Stream updated quads directly into GPU buffer attributes
    */
   public update(
     dt: number,
-    boatPos: Vec2,
+    _boatPos: Vec2,
     bowPos: Vec2,
     sternPos: Vec2,
     velocity: Vec2,
@@ -136,9 +136,9 @@ export class BoatWakeTrail {
     }
 
     const currentSpeed = length(velocity);
-    const minSpeedThreshold = 1.2;
+    const minSpeedThreshold = 0.8;
 
-    // 1. Emit Kelvin Wake Ribbon Nodes when boat is in motion
+    // 1. Emit Trail Ribbon Nodes along stern trajectory when boat is moving
     if (currentSpeed >= minSpeedThreshold) {
       const fwd = normalize(velocity);
       const norm = vec(-fwd.y, fwd.x);
@@ -148,87 +148,81 @@ export class BoatWakeTrail {
         shouldEmit = true;
       } else {
         const distMoved = Math.hypot(
-          boatPos.x - this.lastEmitPos.x,
-          boatPos.y - this.lastEmitPos.y,
+          sternPos.x - this.lastEmitPos.x,
+          sternPos.y - this.lastEmitPos.y,
         );
-        // Spacing between ribbon nodes: ~2.8 pond units for buttery smooth curved ribbons
-        if (distMoved >= Math.max(2.2, 2.8 * scale)) {
+        // Spacing between trail nodes: ~2.0 pond units for continuous, unbroken trail ribbon
+        if (distMoved >= Math.max(1.6, 2.0 * scale)) {
           shouldEmit = true;
         }
       }
 
       if (shouldEmit) {
-        this.lastEmitPos = { ...boatPos };
+        this.lastEmitPos = { ...sternPos };
 
         if (this.nodes.length >= MAX_WAKE_NODES) {
           this.nodes.shift();
         }
 
         this.nodes.push({
-          pos: { ...bowPos },
+          pos: { ...sternPos },
           forward: fwd,
           normal: norm,
           age: 0,
-          maxAge: 1.4 + Math.min(0.6, currentSpeed * 0.02), // Lasts longer at higher speeds
+          maxAge: 2.2 + Math.min(0.8, currentSpeed * 0.05), // Smooth, lingering trail behind boat
           scale,
           speed: currentSpeed,
         });
       }
 
-      // 2. Spawn Bow Splash Foam
-      this.bowSplashAccumulator += dt * Math.min(currentSpeed * 0.9, 32.0);
-      while (this.bowSplashAccumulator >= 1.0) {
-        this.bowSplashAccumulator -= 1.0;
-        if (this.foamParticles.length >= MAX_FOAM_PARTICLES) {
-          this.foamParticles.shift();
-        }
-
-        // Lateral spread at bow (port or starboard spray)
-        const side = Math.random() < 0.5 ? 1 : -1;
-        const sprayAngle = (Math.random() - 0.5) * 0.8;
-        const spraySpeed = (currentSpeed * 0.35 + 4.0 + Math.random() * 8.0) * scale;
-
-        const sprayVx = fwd.x * spraySpeed * 0.2 + (norm.x * side + fwd.x * sprayAngle) * spraySpeed * 0.8;
-        const sprayVy = fwd.y * spraySpeed * 0.2 + (norm.y * side + fwd.y * sprayAngle) * spraySpeed * 0.8;
-
-        this.foamParticles.push({
-          x: bowPos.x + norm.x * side * (3.5 * scale) + (Math.random() - 0.5) * (2.0 * scale),
-          y: bowPos.y + norm.y * side * (3.5 * scale) + (Math.random() - 0.5) * (2.0 * scale),
-          vx: sprayVx,
-          vy: sprayVy,
-          size: (3.0 + Math.random() * 2.8) * scale,
-          age: 0,
-          maxAge: 0.35 + Math.random() * 0.25,
-          isStern: false,
-        });
-      }
-
-      // 3. Spawn Stern Foam Bubbles
-      this.sternBubbleAccumulator += dt * Math.min(currentSpeed * 0.5, 18.0);
+      // 2. Spawn Trailing Stern Foam Bubbles
+      this.sternBubbleAccumulator += dt * Math.min(currentSpeed * 0.8, 24.0);
       while (this.sternBubbleAccumulator >= 1.0) {
         this.sternBubbleAccumulator -= 1.0;
         if (this.foamParticles.length >= MAX_FOAM_PARTICLES) {
           this.foamParticles.shift();
         }
 
-        const sternSpeed = (2.0 + Math.random() * 4.0) * scale;
+        const sternSpeed = (1.5 + Math.random() * 3.0) * scale;
+        const sideOffset = (Math.random() - 0.5) * (4.5 * scale);
+
         this.foamParticles.push({
-          x: sternPos.x + (Math.random() - 0.5) * (4.0 * scale),
-          y: sternPos.y + (Math.random() - 0.5) * (4.0 * scale),
-          vx: -fwd.x * sternSpeed + (Math.random() - 0.5) * 2.0,
-          vy: -fwd.y * sternSpeed + (Math.random() - 0.5) * 2.0,
-          size: (2.0 + Math.random() * 2.2) * scale,
+          x: sternPos.x + norm.x * sideOffset,
+          y: sternPos.y + norm.y * sideOffset,
+          vx: -fwd.x * sternSpeed + (Math.random() - 0.5) * 1.5,
+          vy: -fwd.y * sternSpeed + (Math.random() - 0.5) * 1.5,
+          size: (2.2 + Math.random() * 2.5) * scale,
           age: 0,
-          maxAge: 0.75 + Math.random() * 0.45,
+          maxAge: 1.0 + Math.random() * 0.5,
           isStern: true,
         });
       }
+
+      // 3. Spawn Subtle Bow Froth (gentle prow contact with water)
+      this.bowSplashAccumulator += dt * Math.min(currentSpeed * 0.4, 12.0);
+      while (this.bowSplashAccumulator >= 1.0) {
+        this.bowSplashAccumulator -= 1.0;
+        if (this.foamParticles.length >= MAX_FOAM_PARTICLES) {
+          this.foamParticles.shift();
+        }
+
+        this.foamParticles.push({
+          x: bowPos.x + (Math.random() - 0.5) * (2.5 * scale),
+          y: bowPos.y + (Math.random() - 0.5) * (2.5 * scale),
+          vx: fwd.x * (currentSpeed * 0.15) + (Math.random() - 0.5) * 2.0,
+          vy: fwd.y * (currentSpeed * 0.15) + (Math.random() - 0.5) * 2.0,
+          size: (1.8 + Math.random() * 1.8) * scale,
+          age: 0,
+          maxAge: 0.30 + Math.random() * 0.15,
+          isStern: false,
+        });
+      }
     } else {
-      // Idle decay when vessel is stopped
+      // Idle decay when boat is stopped
       this.lastEmitPos = null;
     }
 
-    // 4. Age and update existing ribbon nodes
+    // 4. Age and update trail nodes
     for (let i = this.nodes.length - 1; i >= 0; i--) {
       const node = this.nodes[i];
       node.age += dt;
@@ -247,8 +241,8 @@ export class BoatWakeTrail {
       }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      p.vx *= 0.90; // Water viscous drag
-      p.vy *= 0.90;
+      p.vx *= 0.92; // Water viscous drag
+      p.vy *= 0.92;
     }
 
     // 6. Stream geometry vertices to GPU
@@ -256,7 +250,7 @@ export class BoatWakeTrail {
   }
 
   /**
-   * Commit all active wake ribbons and foam particles into vertex arrays.
+   * Commit the cohesive wake trail ribbon and foam particles into vertex arrays.
    */
   private commitGeometry(weatherId: WeatherPresetId): void {
     let vertCursor = 0;
@@ -316,7 +310,7 @@ export class BoatWakeTrail {
       vertCursor += 6;
     };
 
-    // A. Render Port & Starboard V-shaped Kelvin Wake Ribbons
+    // A. Render Cohesive Wake Trail Ribbon (Centered on stern wake path)
     const n = this.nodes.length;
     if (n >= 2) {
       for (let i = 0; i < n - 1; i++) {
@@ -326,68 +320,59 @@ export class BoatWakeTrail {
         const tA = clamp(nA.age / nA.maxAge, 0, 1);
         const tB = clamp(nB.age / nB.maxAge, 0, 1);
 
-        // Kelvin wake envelope: lateral expansion increases with age^(0.65)
-        const spreadA = (5.5 + 24.0 * Math.pow(tA, 0.65)) * nA.scale;
-        const spreadB = (5.5 + 24.0 * Math.pow(tB, 0.65)) * nB.scale;
+        // Sleek trail ribbon: starts at stern width (~3.8 units half-width), expands slightly into soft foam
+        const halfWidthA = (3.8 + 2.8 * Math.pow(tA, 0.5)) * (1.0 - 0.22 * tA) * nA.scale;
+        const halfWidthB = (3.8 + 2.8 * Math.pow(tB, 0.5)) * (1.0 - 0.22 * tB) * nB.scale;
 
-        // Ribbon thickness tapers as wave disperses
-        const thickA = (2.6 * (1.0 - tA * 0.45)) * nA.scale;
-        const thickB = (2.6 * (1.0 - tB * 0.45)) * nB.scale;
-
-        // Opacity curve: swift rise, long graceful fade-out
-        const alphaA = clamp(Math.sin(tA * Math.PI) * 1.15, 0, 1) * (1.0 - Math.pow(tA, 1.8)) * 0.92;
-        const alphaB = clamp(Math.sin(tB * Math.PI) * 1.15, 0, 1) * (1.0 - Math.pow(tB, 1.8)) * 0.92;
+        // Opacity curve: solid, beautiful trail right behind the vessel, gently fading towards tail
+        const alphaA = clamp(Math.sin(Math.pow(tA, 0.75) * Math.PI) * 1.25, 0, 1) * (1.0 - Math.pow(tA, 1.6)) * 0.90;
+        const alphaB = clamp(Math.sin(Math.pow(tB, 0.75) * Math.PI) * 1.25, 0, 1) * (1.0 - Math.pow(tB, 1.6)) * 0.90;
 
         if (alphaA <= 0.01 && alphaB <= 0.01) continue;
 
-        // Port (Left) Ribbon Arm
-        const portCoreA = vec(nA.pos.x + nA.normal.x * spreadA, nA.pos.y + nA.normal.y * spreadA);
-        const portCoreB = vec(nB.pos.x + nB.normal.x * spreadB, nB.pos.y + nB.normal.y * spreadB);
+        // Center spine vertices
+        const cA = nA.pos;
+        const cB = nB.pos;
 
-        const portInnerA = vec(portCoreA.x - nA.normal.x * thickA, portCoreA.y - nA.normal.y * thickA);
-        const portOuterA = vec(portCoreA.x + nA.normal.x * thickA, portCoreA.y + nA.normal.y * thickA);
-        const portInnerB = vec(portCoreB.x - nB.normal.x * thickB, portCoreB.y - nB.normal.y * thickB);
-        const portOuterB = vec(portCoreB.x + nB.normal.x * thickB, portCoreB.y + nB.normal.y * thickB);
+        // Left outer vertices
+        const lA = vec(cA.x + nA.normal.x * halfWidthA, cA.y + nA.normal.y * halfWidthA);
+        const lB = vec(cB.x + nB.normal.x * halfWidthB, cB.y + nB.normal.y * halfWidthB);
 
+        // Right outer vertices
+        const rA = vec(cA.x - nA.normal.x * halfWidthA, cA.y - nA.normal.y * halfWidthA);
+        const rB = vec(cB.x - nB.normal.x * halfWidthB, cB.y - nB.normal.y * halfWidthB);
+
+        // Left Half Quad (from left edge to center spine): white center, cyan outer edge
         writeQuad(
-          portInnerA,
-          portOuterA,
-          portOuterB,
-          portInnerB,
+          lA,
+          cA,
+          cB,
+          lB,
+          [frR, frG, frB, alphaA * 0.35],
           [cr, cg, cb, alphaA],
-          [frR, frG, frB, alphaA * 0.55],
-          [frR, frG, frB, alphaB * 0.55],
           [cr, cg, cb, alphaB],
+          [frR, frG, frB, alphaB * 0.35],
         );
 
-        // Starboard (Right) Ribbon Arm
-        const starCoreA = vec(nA.pos.x - nA.normal.x * spreadA, nA.pos.y - nA.normal.y * spreadA);
-        const starCoreB = vec(nB.pos.x - nB.normal.x * spreadB, nB.pos.y - nB.normal.y * spreadB);
-
-        const starInnerA = vec(starCoreA.x + nA.normal.x * thickA, starCoreA.y + nA.normal.y * thickA);
-        const starOuterA = vec(starCoreA.x - nA.normal.x * thickA, starCoreA.y - nA.normal.y * thickA);
-        const starInnerB = vec(starCoreB.x + nB.normal.x * thickB, starCoreB.y + nB.normal.y * thickB);
-        const starOuterB = vec(starCoreB.x - nB.normal.x * thickB, starCoreB.y - nB.normal.y * thickB);
-
+        // Right Half Quad (from center spine to right edge): white center, cyan outer edge
         writeQuad(
-          starInnerA,
-          starOuterA,
-          starOuterB,
-          starInnerB,
+          cA,
+          rA,
+          rB,
+          cB,
           [cr, cg, cb, alphaA],
-          [frR, frG, frB, alphaA * 0.55],
-          [frR, frG, frB, alphaB * 0.55],
+          [frR, frG, frB, alphaA * 0.35],
+          [frR, frG, frB, alphaB * 0.35],
           [cr, cg, cb, alphaB],
         );
       }
     }
 
-    // B. Render Foam & Splash Particles (Soft circular pixel billows)
+    // B. Render Foam Bubbles along the trail channel
     for (const p of this.foamParticles) {
       const lifeT = clamp(p.age / p.maxAge, 0, 1);
-      // Particle expansion then contraction
-      const currentRadius = p.size * (0.6 + Math.sin(lifeT * Math.PI) * 0.55);
-      const alpha = (1.0 - Math.pow(lifeT, 1.5)) * (p.isStern ? 0.72 : 0.95);
+      const currentRadius = p.size * (0.65 + Math.sin(lifeT * Math.PI) * 0.5);
+      const alpha = (1.0 - Math.pow(lifeT, 1.4)) * (p.isStern ? 0.85 : 0.65);
 
       if (alpha <= 0.01) continue;
 
@@ -397,8 +382,8 @@ export class BoatWakeTrail {
       const p3 = vec(p.x - currentRadius, p.y + currentRadius);
 
       const col: [number, number, number, number] = p.isStern
-        ? [frR, frG, frB, alpha]
-        : [cr, cg, cb, alpha];
+        ? [cr, cg, cb, alpha]
+        : [frR, frG, frB, alpha];
 
       writeQuad(
         p0,
@@ -413,7 +398,7 @@ export class BoatWakeTrail {
         [1.0, 0.0],
         [1.0, 1.0],
         [0.0, 1.0],
-        0.04, // Slightly above ribbons
+        0.04, // Slightly above trail ribbon
       );
     }
 

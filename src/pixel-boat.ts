@@ -186,12 +186,12 @@ export class PixelBoat {
   // Navigation & Orbiting states
   public state: BoatState = "orbiting";
   public orbitAngle = 0;
-  public orbitSpeed = 0.22; // ~28.5 seconds per complete circuit
+  public orbitSpeed = 0.11; // Calm, peaceful cruising (~57 seconds per complete circuit)
   public speedMultiplier = 1.0; // Configurable orbit speed slider
-  public orbitRadiusX = 96.0; // Horizontal orbit around clock
-  public orbitRadiusY = 52.0; // Vertical orbit around clock
+  public orbitRadiusX = 96.0; // Horizontal orbit around pond center
+  public orbitRadiusY = 52.0; // Vertical orbit around pond center
   public orbitCenter: Vec2 = vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);
-  public returnSpeed = 32.0; // Return velocity when dropped
+  public returnSpeed = 20.0; // Gentle return velocity when dropped
   public facingLeft = true;
   private wakeTimer = 0;
   public readonly wakeTrail = new BoatWakeTrail();
@@ -573,7 +573,7 @@ export class PixelBoat {
     ripples?: RippleSystem | null,
     weatherId: WeatherPresetId = "sunny",
     onWaterSplash?: (pos: Vec2) => void,
-    clockPosition?: Vec2 | null,
+    _clockPosition?: Vec2 | null,
     onWake?: (pos: Vec2) => void,
     school?: School | readonly Koi[] | null,
   ): void {
@@ -603,11 +603,9 @@ export class PixelBoat {
       }
     }
 
-    // 1. Synchronize Orbit Center with current Pond Clock position
-    if (clockPosition) {
-      this.orbitCenter.x = clockPosition.x;
-      this.orbitCenter.y = clockPosition.y;
-    }
+    // 1. Maintain locked orbit center at pond center (CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48)
+    this.orbitCenter.x = CANVAS_WIDTH * 0.5;
+    this.orbitCenter.y = CANVAS_HEIGHT * 0.48;
 
     // 2. Navigation State Machine: Orbiting vs Returning vs Dragging
     const prevPosition = vec(this.options.position.x, this.options.position.y);

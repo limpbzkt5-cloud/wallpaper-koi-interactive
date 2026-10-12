@@ -73,12 +73,9 @@
     "type": "dropdown",
     "value": 0,
     "text": "Clock Position",
-    "help": "Screen anchor position of the clock across the pond viewport.",
+    "help": "Clock is anchored at Center of Pond (or set Clock Style to Off) ensuring the boat orbits gracefully around it.",
     "items": [
-      "Center of Pond",
-      "Top Right",
-      "Top Left",
-      "Bottom Center"
+      "Center of Pond (Locked)"
     ]
   },
   "boat_scale": {

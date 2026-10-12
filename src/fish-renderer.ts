@@ -537,10 +537,7 @@ export class FishRenderer {
     this.duckweed.update(time, school.ripples);
     this.lotusLeaves.update(time, school.ripples);
     this.pondClock.update(new Date(), this.activeWeatherId, time, school.ripples);
-    const clockCenter =
-      this.pondClock.options.enabled && this.pondClock.options.mode !== "off"
-        ? vec(this.pondClock.mesh.position.x, this.pondClock.mesh.position.y)
-        : vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);
+    const clockCenter = vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);
 
     this.pixelBoat.update(
       time,

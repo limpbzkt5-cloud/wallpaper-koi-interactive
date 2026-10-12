@@ -61,7 +61,7 @@ describe("PixelBoat", () => {
 
   it("handles dragging and returning to orbit around the clock", () => {
     const boat = new PixelBoat();
-    const clockCenter = vec(240, 135);
+    const clockCenter = boat.orbitCenter;
 
     // Drag boat to corner
     const dragPos = vec(50, 50);

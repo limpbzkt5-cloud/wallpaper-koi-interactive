@@ -308,20 +308,8 @@
         "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
         "options": [
           {
-            "label": "Center of Pond",
+            "label": "Center of Pond (Locked)",
             "value": "center"
-          },
-          {
-            "label": "Top Right",
-            "value": "top-right"
-          },
-          {
-            "label": "Top Left",
-            "value": "top-left"
-          },
-          {
-            "label": "Bottom Center",
-            "value": "bottom-center"
           }
         ],
         "order": 27,
