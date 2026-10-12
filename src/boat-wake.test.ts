@@ -62,9 +62,9 @@ describe("BoatWakeTrail", () => {
     );
     expect(trail.getNodes().length).toBe(1);
 
-    // Fast-forward time past maxAge (2.5 seconds)
+    // Fast-forward time past maxAge (6.8+ seconds)
     trail.update(
-      3.0,
+      10.0,
       vec(100, 100),
       vec(120, 100),
       vec(80, 100),

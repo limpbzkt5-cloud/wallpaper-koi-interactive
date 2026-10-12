@@ -678,11 +678,11 @@ export class PixelBoat {
     const flipX = this.facingLeft ? 1 : -1;
     const sternOffset = vec(
       -BOAT_BASE_WIDTH * 0.38 * this.options.scale * flipX,
-      7.0 * this.options.scale,
+      9.2 * this.options.scale,
     );
     const bowOffset = vec(
       BOAT_BASE_WIDTH * 0.42 * this.options.scale * flipX,
-      7.0 * this.options.scale,
+      9.8 * this.options.scale,
     );
     const bowPos = add(this.options.position, bowOffset);
     const sternPos = add(this.options.position, sternOffset);
