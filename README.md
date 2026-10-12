@@ -1,140 +1,206 @@
-# 🎏 Nagomi Koi Pond — Interactive Live Wallpaper
-### Dynamic Procedural Koi Simulation for Wallpaper Engine & Lively Wallpaper
+# 🎏 Nagomi Koi Pond — Interactive 3D Live Wallpaper
 
-An ethereal, interactive 3D koi pond designed as a living desktop wallpaper. Powered by procedural animation, hydrodynamic wave physics, dynamic caustics, diurnal weather presets, and realistic fish biomechanics with zero video loops.
+<div align="center">
 
+![Nagomi Koi Preview](./preview.png)
+
+### Procedural Hydrodynamic Koi Simulation for Wallpaper Engine & Lively Wallpaper
+
+[![Three.js](https://img.shields.io/badge/Three.js-r186-blue.svg)](https://threejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
 [![Vitest](https://img.shields.io/badge/Vitest-78%2F78%20Passing-brightgreen.svg)]()
-[![Three.js](https://img.shields.io/badge/Three.js-r186-blue.svg)]()
 [![Wallpaper Engine](https://img.shields.io/badge/Wallpaper%20Engine-Compatible-orange.svg)]()
 [![Lively Wallpaper](https://img.shields.io/badge/Lively%20Wallpaper-Compatible-cyan.svg)]()
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+*An ethereal, procedural 3D aquatic sanctuary for your desktop. Featuring real-time shallow water wave simulation, Apple-style liquid glass clock optics, hydrodynamic lily pad drift physics, diverse pond wildlife, and 13 rare metamorphic koi mutations.*
+
+[Features](#-key-features) • [Installation](#-installation-guide) • [Controls](#-interactive-controls) • [Customization](#-customization-reference) • [Math & Physics](#-mathematical--computational-model) • [Development](#-development--scripts)
+
+</div>
 
 ---
 
-## 🚀 Quick Installation Guide
+## 🌟 Key Features
+
+### 🕒 Apple Liquid Glass Pond Clock
+- **Frosted Glassmorphism**: Custom GLSL shader modeling surface normals $\nabla \alpha$, specular rim reflection, internal caustics, and subtle fluid undulation.
+- **Dual Display Modes**:
+  - `Submerged`: Sits underwater below fish swimming paths; koi fish swim gracefully across the clock face while water caustics play through the glass.
+  - `Floating`: A crisp surface HUD resting gently on the water with organic wave buoyancy.
+  - `Off`: Completely detaches the clock mesh with **zero draw calls**.
+- **Tick Micro-Ripples**: Radiates gentle Gaussian wave pulses from the center with each second transition.
+- **Adaptive Weather Lighting**: Automatically adjusts drop shadows, edge gleam, and caustic tints across 7 weather presets.
+
+### 🐟 Biomechanical Spine Kinematics & AI
+- **Physiological Cephalocaudal Stiffness Gradient**: Rigid cranial/thoracic cavity transitioning smoothly to flexible caudal fins.
+- **Spline Curvature Safety Clamping**: Strict body curvature clamp ($\theta \le 52.7^\circ$) eliminates unnatural mesh pinching or U-shape folding during high-speed turns.
+- **Boid Schooling & Avoidance**: Organic schooling, obstacle avoidance around floating ice blocks, and realistic feeding behavior.
+
+### 🌊 Hydrodynamic Water Waves & Floating Flora
+- **2D Shallow Water Physics**: Real-time FDTD wave propagation driven by user clicks, swimming fish, and rain.
+- **Wave-Induced Plant Drift**: Lotus leaves (water lilies) and duckweed physically bob and glide with the wave flow when water ripples pass beneath them.
+- **Wildlife Variety**: Fluttering procedural butterflies across 8 distinct color palettes.
+
+### 🧬 13 Rare Metamorphic Koi Mutations
+Koi periodically metamorphose into mythical variants with custom particle effects and shaders:
+- **Astraeus** (Mythic): Deep cosmic indigo body enveloped in radiant starlight halos.
+- **Serene** (Rare): Bioluminescent jade-emerald glow with soothing wake ripples.
+- **Umbra** (Mythic): Void silhouette crowned by a rotating 360° solar eclipse corona.
+- **Aurora** (Legendary): Shifting polar borealis gradient across scales.
+- **Midas** (Legendary): Brilliant 24k molten gold scales.
+- **Frozen** (Rare): Trapped inside a floating crystalline ice block that obstacles other fish.
+- **Electric**, **Nuclear**, **Mythical**, **Rainbow Cluster**, **Ishmael**, **Crimson**, and **Bunny**.
+
+### 🌤️ 7 Diurnal Weather Presets
+- **Sunny**: Bright sunlight with crisp high-contrast caustics.
+- **Sunset**: Warm dusk amber glow with lengthened shadows.
+- **Moonlight**: Bioluminescent night with soft lunar tones.
+- **Rain**: Dynamic raindrops and surface ripple rings.
+- **Overcast**: Soft diffused cloud cover.
+- **Mist**: Atmospheric morning fog.
+- **Deep Clear**: Vibrant cyan tropical lagoon.
+
+### ⚡ 0% GPU Background Suspension
+- **Smart Power Saving**: Automatically pauses rendering when full-screen 3D games or applications are active, preserving 100% of gaming performance.
+- **FPS Limiter**: Native (Uncapped), 60 FPS, 45 FPS, and 30 FPS options to save laptop battery.
+
+---
+
+## 🚀 Installation Guide
 
 ### Option 1: Lively Wallpaper (Free & Open Source)
 
 #### Step 1: Install Wallpaper
-- **Method A (Drag & Drop Package)**:
+- **Method A (Drag & Drop Package — Recommended)**:
   1. Download [`NagomiKoi.livelypack`](./NagomiKoi.livelypack) from the repository root.
   2. Open **Lively Wallpaper**.
-  3. Simply **drag and drop** `NagomiKoi.livelypack` directly into the Lively window, or click **Add Wallpaper (+)** ➔ **Browse** ➔ select `NagomiKoi.livelypack`.
+  3. **Drag and drop** `NagomiKoi.livelypack` directly into the Lively Wallpaper window (or click **Add Wallpaper (+)** ➔ **Browse** ➔ select `NagomiKoi.livelypack`).
   4. Click **OK** to set it as your active desktop wallpaper!
 - **Method B (Local Developer Sync)**:
-  - Double-click [`Sync-Lively-Wallpaper.bat`](./Sync-Lively-Wallpaper.bat) or run `npm run sync:lively`. This compiles the project and links it directly into your active Lively library.
+  - Double-click [`Sync-Lively-Wallpaper.bat`](./Sync-Lively-Wallpaper.bat) or run `npm run sync:lively`.
 
 #### Step 2: Customizing Settings in Lively
 1. In Lively Wallpaper, find **Nagomi Koi** in your library.
 2. Click the three dots `...` (or right-click) ➔ Select **Customise Wallpaper**.
-3. All properties are organized logically with instant real-time preview:
-   - **Weather Preset**: Choose between *Sunny*, *Sunset*, *Moonlight*, *Rain*, *Overcast*, *Mist*, or *Deep Clear*.
-   - **Apple Liquid Glass Clock**: Toggle on/off, choose *Submerged* (underwater refraction beneath fish) or *Floating* (crisp surface HUD), switch between *24-Hour* and *12-Hour (AM/PM)*, toggle seconds counter, and adjust opacity.
-   - **Interactive Actions**: Click **Scatter Koi** to trigger a ripple panic wave, or **Reset Pond** to re-seed school mutations.
-   - **Ambient River Audio**: Check the audio toggle to listen to a soothing natural stream loop.
-   - **Performance / FPS Cap**: Select *60 FPS*, *45 FPS*, or *30 FPS* to save laptop battery and GPU cycles.
-   - **13 Mythic Mutations**: Fine-tune metamorphosis probabilities or toggle specific mutations (Astraeus, Serene, Umbra, Aurora, Midas, Frozen, etc.).
-4. Hover over any property title to view detailed **help tooltips** explaining what each setting does!
+3. All options are logically grouped with real-time preview and **help tooltips** on hover:
+   - **Environment**: Weather preset, rain ripples, ambient stream audio.
+   - **Clock**: Apple Liquid Glass clock, submerged/floating mode, 12h/24h format, seconds badge, opacity, screen position.
+   - **Pond & Fish**: Koi population slider (1–48), *Scatter Koi* button, *Reset Pond* button.
+   - **Performance**: Frame rate cap (Native, 60, 45, 30 FPS).
+   - **Mutations**: Metamorphosis chance, cycle interval, and toggles for all 13 legendary mutations.
 
-#### Step 3: Lively Wallpaper Tips & Best Practices
-- **Mouse Interaction**: Make sure **Lively Settings ➔ Wallpaper ➔ Input ➔ Mouse Interaction** is set to *Enabled* to interact with water ripples, glide lotus leaves, and feed koi.
-- **Audio Playback**: If audio is silent after checking *Ambient River Audio*, ensure **Lively Settings ➔ Audio ➔ Volume** is turned up.
-- **Auto-Pause while Gaming**: Lively Wallpaper automatically pauses GPU rendering to 0% usage whenever a game or full-screen app is running.
+#### Step 3: Lively Wallpaper Tips
+- **Mouse Waves**: Ensure **Lively Settings ➔ Wallpaper ➔ Input ➔ Mouse Interaction** is set to *Enabled*.
+- **Audio**: Ambient river stream audio is muted by default; check the *Ambient River Audio* checkbox and make sure *Lively Settings ➔ Audio ➔ Volume* is up.
 
 ---
 
 ### Option 2: Wallpaper Engine (Steam)
-#### Automatic 1-Click Install:
+
+#### 1-Click Automatic Install:
 1. Double-click [`Sync-Wallpaper-Engine.bat`](./Sync-Wallpaper-Engine.bat) in the repository root.
-2. The script will automatically compile the application and link it directly to your Wallpaper Engine project directory:
+2. The script compiles the project and links it directly into your Wallpaper Engine directory:
    `C:\Program Files (x86)\Steam\steamapps\common\wallpaper_engine\projects\myprojects\nagomi_koi`
 3. Open Wallpaper Engine and select **Interactive Koi Pond**!
 
-#### Manual Installation:
+#### Manual Install:
 1. Clone or download this repository.
 2. Run `npm install && npm run build`.
-3. Copy the contents of the `dist/` folder along with `project.json` and `preview.png` into:
+3. Copy the contents of `dist/` along with `project.json` and `preview.png` into:
    `C:\Program Files (x86)\Steam\steamapps\common\wallpaper_engine\projects\myprojects\nagomi_koi\`
 4. Launch Wallpaper Engine.
 
 ---
 
-### Option 3: Synchronize Both Wallpapers Simultaneously
+### Option 3: Synchronize Both Platforms Simultaneously
 If you have both Wallpaper Engine and Lively Wallpaper installed:
 - Double-click [`Sync-All-Wallpapers.bat`](./Sync-All-Wallpapers.bat) or run:
   ```bash
   npm run sync:all
   ```
-- Both wallpaper directories and packages will be built and updated in a single operation!
 
 ---
 
-## ✨ Features & Customization
+## 🎮 Interactive Controls
 
-### 🕒 Translucent Liquid Pond Clock
-- **3 Display Modes**:
-  - `Submerged`: Sits underwater with authentic fluid refraction and caustic light streams flowing across the digits.
-  - `Floating`: A luminous surface aquatic HUD resting gently on the water with organic wave buoyancy.
-  - `Off (Disabled)`: Completely disables the clock mesh with **0 draw calls**.
-- **Full Customization**:
-  - Time Formats: `24-Hour` or `12-Hour (AM/PM)`.
-  - Toggle seconds display.
-  - Opacity slider (10% to 100%).
-  - 4 Screen Positions: *Center of Pond*, *Top Right*, *Top Left*, *Bottom Center*.
-
-### 🐟 Biomechanical Koi Locomotion
-- **Physiologically Accurate Spine Kinematics**:
-  - Implements a cephalocaudal vertebral stiffness gradient (rigid skull and thoracic cavity, smoothly transitioning to flexible caudal swimming blades).
-  - Strict cumulative body curvature clamp ($\le 52.7^\circ$) eliminates unnatural U-shape bending or mesh pinching during sharp turns.
-- **Natural Behaviors**: Gliding, coasting, hovering, schooling, scatter impulses, and feeding gulps.
-- **Tactile Obstacle Avoidance**: Living fish tactfully detour around stationary frozen fish ice blocks.
-
-### 🧬 13 Rare Metamorphic Mutations
-Watch koi periodically metamorphose into mythical and legendary variants:
-- **Astraeus** (Mythic): Deep cosmic indigo body with radiant starlight celestial halos.
-- **Serene** (Rare): Bioluminescent jade-green glow with gentle fluid water ripples.
-- **Umbra** (Mythic): Void silhouette crowned with a 360-degree rotating solar eclipse corona.
-- **Aurora** (Legendary): Shimmering polar borealis gradient.
-- **Midas** (Legendary): Luminous 24k molten gold scales.
-- **Frozen** (Rare): Encased within an icy crystalline block that gently floats on the water.
-- **Electric**, **Nuclear**, **Mythical**, **Rainbow Cluster**, **Ishmael**, **Crimson**, and **Bunny**.
-- *Control Panel:* Toggle any specific mutation on/off, adjust mutation metamorphosis rate (0–100%), or trigger instant transformations.
-
-### 🌤️ 7 Dynamic Weather Presets
-- **Sunny**: Crisp crystalline daylight with sharp water caustics.
-- **Sunset**: Warm dusk amber glow with lengthened shadows.
-- **Moonlight**: Ethereal nighttime bioluminescence.
-- **Rain**: Atmospheric rain ripples and cooling water tones.
-- **Overcast**: Soft diffused cloud cover.
-- **Mist**: Atmospheric morning fog.
-- **Deep Clear**: Vibrant cyan tropical lagoon.
-
-### ⚡ 0% CPU/GPU Background Suspension
-- **Smart Power Saving**: Automatically pauses rendering when full-screen 3D games or applications are active, or when the desktop is hidden, preserving 100% of your system's gaming performance.
-- **FPS Limiter Options**: Native (Uncapped), 60 FPS, 45 FPS, and 30 FPS.
-- Optional ambient river water audio stream with mute toggles.
+| Interaction | Action | Effect |
+| :--- | :--- | :--- |
+| **Left Click / Tap** | Click anywhere on pond | Generates circular water ripples; nudges nearby lotus leaves and duckweed |
+| **Click & Drag** | Move mouse across surface | Creates continuous hydrodynamic wake trail; koi avoid or follow the wave |
+| **Feeding** | Click near swimming koi | Fish dart towards the disturbance looking for food |
+| **Scatter Button** | Click *Scatter Koi* in settings | Triggers a sudden pond-wide panic wave, dispersing all fish outward |
+| **Reset Button** | Click *Reset Pond* in settings | Re-seeds school genetics, positions, and mutation rolls |
 
 ---
 
-## 🛠️ Development & Building from Source
+## ⚙️ Customization Reference
+
+| Property Key | Control Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `weather` | Dropdown | `Sunny` | Diurnal lighting and water caustics preset |
+| `clock_enabled` | Checkbox | `true` | Display procedural Apple-style liquid glass clock |
+| `clock_mode` | Dropdown | `Submerged` | `Submerged` (underwater refraction) or `Floating` (surface HUD) |
+| `clock_format` | Dropdown | `24-Hour` | Standard 24h or 12h (AM/PM) format |
+| `clock_seconds` | Checkbox | `false` | Auxiliary seconds counter badge |
+| `clock_opacity` | Slider | `45%` | Transparency level of the frosted glass (10%–100%) |
+| `clock_position` | Dropdown | `Center` | Screen anchor: Center, Top-Right, Top-Left, Bottom-Center |
+| `koicount` | Slider | `16` | Total koi fish count (1 to 48) |
+| `rain` | Checkbox | `false` | Raindrops and surface wave perturbations |
+| `sound` | Checkbox | `false` | Ambient river stream audio loop |
+| `framerate` | Dropdown | `Native` | Frame rate limiter: Native, 60, 45, or 30 FPS |
+| `visitorfrequency`| Dropdown | `Balanced` | Frequency of rare nomadic visitor fish appearances |
+| `mutationchance` | Slider | `70%` | Probability of koi metamorphosing during cycle intervals |
+| `allow_*` | Checkboxes | `true` | Individual toggles for each of the 13 legendary mutations |
+
+---
+
+## 📐 Mathematical & Computational Model
+
+### 1. 2D Hydrodynamic Shallow Water Wave Equation
+Water wave displacement $h(x, y, t)$ is computed via a discretized 2D wave grid:
+$$\frac{\partial^2 h}{\partial t^2} = c^2 \left(\frac{\partial^2 h}{\partial x^2} + \frac{\partial^2 h}{\partial y^2}\right) - \gamma \frac{\partial h}{\partial t}$$
+Where $c$ represents wave propagation speed and $\gamma$ is viscous damping.
+
+### 2. Apple Liquid Glass Shader & Specular Rim Optics
+Character bevel normals are derived via central differences on the text texture alpha channel:
+$$\vec{n}_{\text{bevel}} = \left(\frac{\alpha_{x+1} - \alpha_{x-1}}{2}, \frac{\alpha_{y+1} - \alpha_{y-1}}{2}\right)$$
+The specular gleam on the rounded glass rim is computed via Blinn-Phong directional reflection:
+$$\text{SpecularRim} = \max\left(0, \vec{n}_{\text{bevel}} \cdot (-\vec{L})\right)^{2.5} \times \text{smoothstep}(0.10, 0.50, \|\vec{n}_{\text{bevel}}\|)$$
+
+### 3. Spline Spine Kinematics & Curvature Safety
+Each koi body is represented by a sequence of 10 vertebral segments. Angular deflection between adjacent vertebrae $\Delta \theta_i$ satisfies:
+$$\sum_{i=1}^{9} |\Delta \theta_i| \le \theta_{\text{max}} = 52.7^\circ$$
+Guaranteeing realistic fish swimming contours with zero self-intersection.
+
+---
+
+## 🛠️ Development & Scripts
 
 ```bash
 # Install dependencies
 npm install
 
-# Start local development server (with live reload)
+# Start local development server with Vite HMR
 npm run dev
 
-# Run automated test suite (74 unit tests)
+# Run full Vitest test suite (78 tests)
 npm run test
 
-# Build production bundle
+# Compile TypeScript and build production bundle
 npm run build
 
-# Sync to Wallpaper Engine & Lively Wallpaper
+# Synchronize directly to Wallpaper Engine
+npm run sync:we
+
+# Synchronize directly to Lively Wallpaper & build .livelypack
+npm run sync:lively
+
+# Synchronize both platforms simultaneously
 npm run sync:all
 ```
 
 ---
 
 ## 📜 License
-MIT License. Inspired by procedural aquatic simulations.
+MIT License. Created with passion for procedural computer graphics and aquatic simulation.
