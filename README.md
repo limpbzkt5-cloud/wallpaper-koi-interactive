@@ -8,12 +8,12 @@
 
 [![Three.js](https://img.shields.io/badge/Three.js-r186-blue.svg)](https://threejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-90%2F90%20Passing-brightgreen.svg)]()
+[![Vitest](https://img.shields.io/badge/Vitest-96%2F96%20Passing-brightgreen.svg)]()
 [![Wallpaper Engine](https://img.shields.io/badge/Wallpaper%20Engine-Compatible-orange.svg)]()
 [![Lively Wallpaper](https://img.shields.io/badge/Lively%20Wallpaper-Compatible-cyan.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
-*An ethereal, procedural 3D aquatic sanctuary for your desktop. Featuring real-time shallow water wave simulation, Apple-style liquid glass clock optics, hydrodynamic lily pad drift physics, traditional Funamori pixel boat with audio-synced gramophone & proximity feeding, diverse pond wildlife, and 14 rare metamorphic koi mutations.*
+*An ethereal, procedural 3D aquatic sanctuary for your desktop. Featuring real-time shallow water wave simulation, Apple-style liquid glass clock optics, hydrodynamic lily pad drift physics, traditional Funamori pixel boat with audio-synced gramophone, V-shaped Kelvin wake ribbons & proximity feeding, diverse pond wildlife, and 14 rare metamorphic koi mutations.*
 
 [Features](#-key-features) • [Installation](#-installation-guide) • [Controls](#-interactive-controls) • [Customization](#-customization-reference) • [Math & Physics](#-mathematical--computational-model) • [Development](#-development--scripts)
 
@@ -44,6 +44,10 @@
 
 ### ⛵ Traditional Funamori Pixel Boat & Vintage Gramophone
 - **Artisanal Japanese Woodcraft**: Procedurally rendered pixel boat featuring cypress/cedar hull planks, dark trim, and a bamboo stern rudder drifting organically across the pond.
+- **Stylized Kelvin Wake Ribbons & Bow Splash Foam**:
+  - Twin V-shaped curved wake ribbons (port & starboard arms) trailing behind the vessel in real time.
+  - Crisp white wave crests with translucent cyan/aqua fringe gradients that spread laterally according to hydrodynamic dispersion equations.
+  - Dynamic bow spray foam billows and trailing stern bubbles that track the boat's cruising trajectory with fluid water drag and decay.
 - **Audio-Reactive Gramophone**:
   - Classic fluted brass trumpet horn and spinning vinyl record synchronized with audio tempo and FFT frequency energy (via Wallpaper Engine Audio API, Lively, or built-in tracks).
   - Floating golden pixel musical notes (`♪`, `♫`) drift gracefully upward from the horn into the pond mist.
@@ -212,6 +216,11 @@ The rotation rate of the boat's vintage gramophone vinyl record $\omega(t)$ coup
 $$\omega(t) = \omega_{\text{idle}} + \Delta\omega \cdot \bar{E}_{\text{audio}}(t), \quad \bar{E}_{\text{audio}}(t) = \frac{1}{N}\sum_{k=1}^{N} |X_k(t)|$$
 Where $X_k(t)$ denotes the discrete Fourier transform (FFT) frequency bins provided by the Wallpaper Engine audio bus or in-app audio context.
 
+### 6. Kelvin Wake Envelope & Dispersive Ribbon Geometry
+As the boat cruises with instantaneous planar velocity $\vec{v}(t)$ and lateral unit normal $\hat{n}(t)$, trailing wake vertices $\vec{r}(t)$ expand outward transversely according to deep-water dispersive wake geometry:
+$$d_{\text{lat}}(\xi) = W_0 + W_{\text{spread}} \cdot \xi^{0.65}, \quad \xi = \frac{a(t)}{\tau_{\text{wake}}} \in [0, 1]$$
+Ribbon opacity decays gracefully under smooth quadratic damping $\alpha(\xi) = \alpha_0 (1 - \xi^{1.8}) \sin(\pi \xi)$ to eliminate visual popping while maintaining a sharp cel-shaded crest.
+
 ---
 
 ## 🛠️ Development & Scripts
@@ -223,7 +232,7 @@ npm install
 # Start local development server with Vite HMR
 npm run dev
 
-# Run full Vitest test suite (90 tests)
+# Run full Vitest test suite (96 tests)
 npm run test
 
 # Compile TypeScript and build production bundle

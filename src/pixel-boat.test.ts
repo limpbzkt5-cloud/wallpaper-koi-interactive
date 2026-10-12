@@ -266,4 +266,18 @@ describe("PixelBoat", () => {
 
     boat.dispose();
   });
+
+  it("produces Kelvin wake nodes and foam particles through wakeTrail during cruising", () => {
+    const boat = new PixelBoat();
+    expect(boat.wakeTrail.getNodes().length).toBe(0);
+
+    // Step several frames of orbiting motion
+    for (let t = 0; t < 1.0; t += 0.05) {
+      boat.update(t, null, "sunny");
+    }
+
+    expect(boat.wakeTrail.getNodes().length).toBeGreaterThan(0);
+    expect(boat.wakeTrail.mesh.visible).toBe(true);
+    boat.dispose();
+  });
 });

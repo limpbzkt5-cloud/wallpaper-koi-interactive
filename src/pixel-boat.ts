@@ -5,6 +5,7 @@ import type { WeatherPresetId } from "./weather";
 import type { RippleSystem } from "./ripple-system";
 import type { School } from "./school";
 import type { Koi } from "./koi";
+import { BoatWakeTrail } from "./boat-wake";
 
 export type BoatInteractionZone = "music" | "food" | null;
 export type BoatPositionPreset = "right" | "left" | "top-right" | "bottom-center";
@@ -193,8 +194,12 @@ export class PixelBoat {
   public returnSpeed = 32.0; // Return velocity when dropped
   public facingLeft = true;
   private wakeTimer = 0;
+  public readonly wakeTrail = new BoatWakeTrail();
 
   public constructor() {
+    // 0. Stylized V-shaped Kelvin Wake Ribbons & Foam
+    this.group.add(this.wakeTrail.mesh);
+
     // 1. Boat Offscreen Pixel Canvas
     const boatCanvasObj = createOffscreenCanvas(SPRITE_PX_WIDTH, SPRITE_PX_HEIGHT);
     this.canvas = boatCanvasObj.canvas;
@@ -576,6 +581,7 @@ export class PixelBoat {
       this.noteGeometry.setDrawRange(0, 0);
       this.pelletGeometry.setDrawRange(0, 0);
       this.pelletShadowGeometry.setDrawRange(0, 0);
+      this.wakeTrail.clear();
       return;
     }
 
@@ -604,6 +610,8 @@ export class PixelBoat {
     }
 
     // 2. Navigation State Machine: Orbiting vs Returning vs Dragging
+    const prevPosition = vec(this.options.position.x, this.options.position.y);
+
     if (this.state === "orbiting") {
       const currentOrbitSpeed = this.orbitSpeed * this.speedMultiplier;
       this.orbitAngle = (this.orbitAngle + currentOrbitSpeed * dt) % (Math.PI * 2);
@@ -659,6 +667,36 @@ export class PixelBoat {
         }
       }
     }
+
+    // Calculate instantaneous planar velocity
+    const boatVelocity = vec(
+      (this.options.position.x - prevPosition.x) / dt,
+      (this.options.position.y - prevPosition.y) / dt,
+    );
+
+    // Compute bow and stern positions for wake trail emitters
+    const flipX = this.facingLeft ? 1 : -1;
+    const bowOffset = vec(
+      -BOAT_BASE_WIDTH * 0.42 * this.options.scale * flipX,
+      6.0 * this.options.scale,
+    );
+    const sternOffset = vec(
+      BOAT_BASE_WIDTH * 0.38 * this.options.scale * flipX,
+      6.0 * this.options.scale,
+    );
+    const bowPos = add(this.options.position, bowOffset);
+    const sternPos = add(this.options.position, sternOffset);
+
+    // Update V-shaped Kelvin Wake Ribbons, bow spray, and stern bubbles
+    this.wakeTrail.update(
+      dt,
+      this.options.position,
+      bowPos,
+      sternPos,
+      boatVelocity,
+      this.options.scale,
+      weatherId,
+    );
 
     // 3. Natural hydrodynamics: harmonic buoyancy bobbing & rocking pitch
     // m d²h/dt² + c dh/dt + k h = F_wave
@@ -1313,5 +1351,6 @@ export class PixelBoat {
     this.noteGeometry.dispose();
     this.pelletGeometry.dispose();
     this.pelletShadowGeometry.dispose();
+    this.wakeTrail.dispose();
   }
 }
