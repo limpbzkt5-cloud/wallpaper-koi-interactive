@@ -9,9 +9,46 @@
       name="description"
       content="An interactive procedural koi pond with responsive fish, water ripples, changing weather, lotus leaves, and ambient river sound."
     />
+    <script>
+      (function () {
+        window._pendingWallpaperProperties = null;
+        window._pendingGeneralProperties = null;
+        window._pendingWallpaperPaused = null;
+        window._pendingLivelyProperties = [];
+
+        window.wallpaperPropertyListener = {
+          applyUserProperties: function (properties) {
+            window._pendingWallpaperProperties = properties;
+            if (typeof window._onWallpaperProperties === "function") {
+              window._onWallpaperProperties(properties);
+            }
+          },
+          applyGeneralProperties: function (properties) {
+            window._pendingGeneralProperties = properties;
+            if (typeof window._onGeneralProperties === "function") {
+              window._onGeneralProperties(properties);
+            }
+          },
+          setPaused: function (isPaused) {
+            window._pendingWallpaperPaused = isPaused;
+            if (typeof window._onWallpaperPaused === "function") {
+              window._onWallpaperPaused(isPaused);
+            }
+          },
+        };
+
+        window.livelyPropertyListener = function (name, val) {
+          if (typeof window._onLivelyProperty === "function") {
+            window._onLivelyProperty(name, val);
+          } else {
+            window._pendingLivelyProperties.push({ name: name, val: val });
+          }
+        };
+      })();
+    </script>
     <title>Interactive Koi Pond</title>
-    <script type="module" crossorigin src="./assets/index-CdqhRlRB.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-CCkyOB8p.css">
+    <script type="module" crossorigin src="./assets/index-CwICTxza.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-D22p_IQX.css">
   </head>
   <body>
     <div id="root"></div>
