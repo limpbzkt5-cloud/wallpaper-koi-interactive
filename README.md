@@ -67,12 +67,19 @@
   - `Off`: Completely detaches the clock mesh with **zero draw calls**.
 - **Tick Micro-Ripples**: Emits subtle radial Gaussian wave pulses on every second transition.
 
-### 🧬 14 Metamorphic Koi Mutations & Diurnal Weather Modes
-- **Mythical Variants**: Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, and Bunny (with strict $O(1)$ immutable base dimensions preventing runaway size inflation).
-- **Comprehensive Weather Modes**:
-  - **Sync with Device Time**: Dynamically maps your PC's local clock to atmospheric pond illumination (Mist at dawn, Sunny/Deep Clear at midday, Sunset at dusk, Moonlight with nocturnal fireflies at night).
-  - **Cycle Automatically**: Smoothly rotates through all weather presets on a periodic 3-minute interval.
-  - **Static Presets**: Sunny, Sunset, Moonlight, Rain, Overcast, Mist, and Deep Clear.
+### 🧬 14 Metamorphic Koi Mutations & Streamlined Settings
+- **14 Mythical Varieties**: Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, and Bunny (with strict $O(1)$ immutable base dimensions preventing runaway size inflation).
+- **Curated Mutation Diversity Filter**:
+  - Replaces tedious checkbox lists with 5 curated ecological filters:
+    1. *All 14 Varieties (Full Diversity)* — Maximum genetic diversity with all mythical koi varieties.
+    2. *Luminescent & Celestial* — Ethereal glowing species (*Aurora*, *Umbra*, *Astraeus*, *Serene*, *Abyssal*).
+    3. *Elemental & Prismatic* — Dynamic elemental patterns (*Frozen*, *Electric*, *Nuclear*, *Midas*, *RainbowCluster*).
+    4. *Classic & Common* — Traditional pond markings (*Crimson*, *Bunny*, *Ishmael*).
+    5. *Natural Pure Koi Only* — Traditional Japanese Nishikigoi with zero magical mutations.
+- **Dedicated Weather Control Modes**:
+  - **Manual Preset**: Select any of the 7 hand-tuned atmospheric presets (*Sunny*, *Sunset*, *Moonlight*, *Rain*, *Overcast*, *Mist*, *Deep Clear*).
+  - **Sync with Device Time**: Automatically maps local PC clock to pond illumination (gentle morning mist at dawn, radiant sunny/deep clear at midday, warm sunset at dusk, deep moonlight with glowing fireflies at night).
+  - **Cycle Automatically**: Continuously and smoothly transitions across the weather presets on a periodic timer.
 
 ### ⚡ Performance & Adaptive Screen Aspect Ratio
 - **Full Viewport Display**: Automatically adapts to any monitor ratio (16:9, 16:10, 21:9 ultrawide, 3:2, 4:3) with 100% full-screen coverage and zero letterbox/pillarbox black bars.
@@ -94,15 +101,17 @@
 - **Method B (Local Sync Script)**:
   - Run `npm run sync:lively` or double-click [`Sync-Lively-Wallpaper.bat`](./Sync-Lively-Wallpaper.bat).
 
-#### Step 2: Customizing Settings in Lively
-1. In Lively Wallpaper, right-click **Nagomi Koi** in your library ➔ Select **Customise Wallpaper**.
-2. Settings are organized into logical groups with real-time preview and tooltips:
-   - **Environment**: Weather preset, rain ripples, ambient audio.
-   - **Clock**: Display mode (Submerged / Floating / Off), 12h/24h format, seconds counter, opacity, position.
-   - **Funamori Boat**: Scale (0%–200%), cruising speed (0%–200%), anchor positions.
-   - **Pond & Fish**: Koi population (1–48), scatter trigger, pond reset.
-   - **Performance**: Frame rate cap (Native, 60, 45, 30 FPS).
-   - **Mutations**: Metamorphosis chance, interval, and toggles for individual mutations.
+#### Step 2: Customizing Settings in Lively & Wallpaper Engine
+Settings are streamlined into **18 intuitive controls** across logical groups with real-time preview and tooltips:
+- **Weather & Atmosphere**:
+  - `Weather Mode`: Choose *Manual Preset*, *Sync with Device Time*, or *Cycle Automatically*.
+  - `Weather Preset`: Select specific mood (*Sunny*, *Sunset*, *Moonlight*, *Rain*, *Overcast*, *Mist*, *Deep Clear*) when in Manual mode.
+- **Pond & Environment**: Rain ripple density, feeding frequency, boat cruising speed.
+- **Audio**: Ambient music playback toggle and master volume slider.
+- **Clock HUD**: Display mode (*Submerged* / *Floating* / *Off*), 12h/24h format, seconds counter, opacity, and vertical position.
+- **Fauna & Wildlife**: Koi population (10–60), boat visibility toggle, wildlife toggle (frog, dragonflies, butterflies, fireflies).
+- **Mutation Diversity Filter**: Select allowed mutation tiers (All 14 Varieties, Luminescent & Celestial, Elemental & Prismatic, Classic & Common, Pure Natural Koi).
+- **Performance**: Frame rate limiter (Native, 60, 45, 30 FPS).
 
 ---
 
@@ -267,7 +276,7 @@ npm install
 # Start local development server with Vite HMR
 npm run dev
 
-# Run full Vitest test suite (108 tests)
+# Run full Vitest test suite (110 tests)
 npm run test
 
 # Compile TypeScript and build production bundle
