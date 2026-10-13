@@ -94,18 +94,6 @@
     "text": "Boat Cruising Speed (%)",
     "help": "Adjust the orbit cruising speed of the wooden boat around the clock (0% pauses movement)."
   },
-  "boat_position": {
-    "type": "dropdown",
-    "value": 0,
-    "text": "Boat Anchor Position",
-    "help": "Anchor location for the wooden boat across the pond.",
-    "items": [
-      "Right Pond (Scenic)",
-      "Left Pond",
-      "Top Right",
-      "Bottom Center"
-    ]
-  },
   "koicount": {
     "type": "slider",
     "value": 16,
