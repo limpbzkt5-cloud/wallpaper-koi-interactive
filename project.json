@@ -13,324 +13,100 @@
         "order": 1,
         "precision": 1,
         "step": 1,
-        "text": "Koi Count",
+        "text": "Koi Population",
         "type": "slider",
         "value": 16
       },
-      "weather": {
+      "weather_mode": {
         "condition": "",
         "options": [
-          {
-            "label": "Sunny",
-            "value": "sunny"
-          },
-          {
-            "label": "Sunset",
-            "value": "sunset"
-          },
-          {
-            "label": "Moonlight",
-            "value": "moonlight"
-          },
-          {
-            "label": "Rain",
-            "value": "rain"
-          },
-          {
-            "label": "Overcast",
-            "value": "overcast"
-          },
-          {
-            "label": "Mist",
-            "value": "mist"
-          },
-          {
-            "label": "Deep Clear",
-            "value": "deep-clear"
-          },
-          {
-            "label": "Sync with Device Time",
-            "value": "device_time"
-          },
-          {
-            "label": "Cycle Automatically",
-            "value": "cycle"
-          }
+          { "label": "Manual Preset", "value": "manual" },
+          { "label": "Sync with Device Time", "value": "device_time" },
+          { "label": "Cycle Automatically", "value": "cycle" }
         ],
         "order": 2,
-        "text": "Weather Mode / Preset",
+        "text": "Weather Mode",
+        "type": "combo",
+        "value": "manual"
+      },
+      "weather": {
+        "condition": "weather_mode.value == 'manual'",
+        "options": [
+          { "label": "Sunny", "value": "sunny" },
+          { "label": "Sunset", "value": "sunset" },
+          { "label": "Moonlight", "value": "moonlight" },
+          { "label": "Rain", "value": "rain" },
+          { "label": "Overcast", "value": "overcast" },
+          { "label": "Mist", "value": "mist" },
+          { "label": "Deep Clear", "value": "deep-clear" }
+        ],
+        "order": 3,
+        "text": "Weather Preset (When Manual)",
         "type": "combo",
         "value": "sunny"
       },
       "rain": {
         "condition": "",
-        "order": 3,
+        "order": 4,
         "text": "Rain Ripples",
         "type": "bool",
         "value": false
       },
       "sound": {
         "condition": "",
-        "order": 4,
+        "order": 5,
         "text": "Ambient River Audio",
         "type": "bool",
         "value": false
       },
-      "framerate": {
+      "clock_mode": {
         "condition": "",
         "options": [
-          {
-            "label": "Native (Uncapped)",
-            "value": "native"
-          },
-          {
-            "label": "60 FPS (Smooth)",
-            "value": "60"
-          },
-          {
-            "label": "45 FPS (Balanced)",
-            "value": "45"
-          },
-          {
-            "label": "30 FPS (Power Saver)",
-            "value": "30"
-          }
-        ],
-        "order": 5,
-        "text": "Frame Rate Cap",
-        "type": "combo",
-        "value": "native"
-      },
-      "visitorfrequency": {
-        "condition": "",
-        "options": [
-          {
-            "label": "Balanced (~2 Mins)",
-            "value": "balanced"
-          },
-          {
-            "label": "Often (~1 Min)",
-            "value": "often"
-          },
-          {
-            "label": "Rare (~5 Mins)",
-            "value": "rare"
-          },
-          {
-            "label": "Disabled",
-            "value": "disabled"
-          }
+          { "label": "Submerged (Underwater Refraction)", "value": 0 },
+          { "label": "Floating (Crisp Surface HUD)", "value": 1 },
+          { "label": "Off (Disabled)", "value": 2 }
         ],
         "order": 6,
-        "text": "Rare Visitor Frequency",
+        "text": "Pond Clock Style",
         "type": "combo",
-        "value": "balanced"
-      },
-      "mutationchance": {
-        "condition": "",
-        "fraction": false,
-        "max": 100,
-        "min": 0,
-        "order": 7,
-        "precision": 1,
-        "step": 5,
-        "text": "Mutation Metamorphosis Rate (%)",
-        "type": "slider",
-        "value": 70
-      },
-      "cycle_interval": {
-        "condition": "",
-        "fraction": false,
-        "max": 10,
-        "min": 1,
-        "order": 8,
-        "precision": 1,
-        "step": 1,
-        "text": "Fish Cycle Interval (Minutes)",
-        "type": "slider",
-        "value": 2
-      },
-      "allow_crimson": {
-        "condition": "",
-        "order": 9,
-        "text": "Allow Crimson Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_bunny": {
-        "condition": "",
-        "order": 10,
-        "text": "Allow Bunny Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_aurora": {
-        "condition": "",
-        "order": 11,
-        "text": "Allow Aurora Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_umbra": {
-        "condition": "",
-        "order": 12,
-        "text": "Allow Umbra Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_midas": {
-        "condition": "",
-        "order": 13,
-        "text": "Allow Midas Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_electric": {
-        "condition": "",
-        "order": 14,
-        "text": "Allow Electric Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_frozen": {
-        "condition": "",
-        "order": 15,
-        "text": "Allow Frozen Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_nuclear": {
-        "condition": "",
-        "order": 16,
-        "text": "Allow Nuclear Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_mythical": {
-        "condition": "",
-        "order": 17,
-        "text": "Allow Mythical Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_rainbow_cluster": {
-        "condition": "",
-        "order": 18,
-        "text": "Allow Rainbow Cluster Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_ishmael": {
-        "condition": "",
-        "order": 19,
-        "text": "Allow Ishmael Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_serene": {
-        "condition": "",
-        "order": 20,
-        "text": "Allow Serene Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_astraeus": {
-        "condition": "",
-        "order": 21,
-        "text": "Allow Astraeus Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "allow_abyssal": {
-        "condition": "",
-        "order": 22,
-        "text": "Allow Abyssal Mutation",
-        "type": "bool",
-        "value": true
-      },
-      "clock_enabled": {
-        "condition": "",
-        "order": 22,
-        "text": "Display Pond Clock",
-        "type": "bool",
-        "value": true
-      },
-      "clock_mode": {
-        "condition": "clock_enabled.value === true",
-        "options": [
-          {
-            "label": "Submerged (Underwater Refraction)",
-            "value": "submerged"
-          },
-          {
-            "label": "Floating (Crisp Surface HUD)",
-            "value": "floating"
-          },
-          {
-            "label": "Off (Disabled)",
-            "value": "off"
-          }
-        ],
-        "order": 23,
-        "text": "Clock Style",
-        "type": "combo",
-        "value": "submerged"
+        "value": 0
       },
       "clock_format": {
-        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
+        "condition": "clock_mode.value != 2",
         "options": [
-          {
-            "label": "24-Hour",
-            "value": "24h"
-          },
-          {
-            "label": "12-Hour (AM/PM)",
-            "value": "12h"
-          }
+          { "label": "24-Hour", "value": 0 },
+          { "label": "12-Hour (AM/PM)", "value": 1 }
         ],
-        "order": 24,
-        "text": "Clock Time Format",
+        "order": 7,
+        "text": "Clock Format",
         "type": "combo",
-        "value": "24h"
+        "value": 0
       },
       "clock_seconds": {
-        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
-        "order": 25,
-        "text": "Show Seconds",
+        "condition": "clock_mode.value != 2",
+        "order": 8,
+        "text": "Show Seconds Counter",
         "type": "bool",
         "value": false
       },
       "clock_opacity": {
-        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
+        "condition": "clock_mode.value != 2",
         "fraction": false,
         "max": 100,
         "min": 10,
-        "order": 26,
+        "order": 9,
         "precision": 1,
         "step": 2,
         "text": "Clock Opacity (%)",
         "type": "slider",
-        "value": 42
-      },
-      "clock_position": {
-        "condition": "clock_enabled.value === true && clock_mode.value !== 'off'",
-        "options": [
-          {
-            "label": "Center of Pond (Locked)",
-            "value": "center"
-          }
-        ],
-        "order": 27,
-        "text": "Clock Position",
-        "type": "combo",
-        "value": "center"
+        "value": 45
       },
       "boat_scale": {
         "condition": "",
         "fraction": false,
         "max": 200,
         "min": 0,
-        "order": 28,
+        "order": 10,
         "precision": 1,
         "step": 5,
         "text": "Pixel Wooden Boat Scale (%)",
@@ -338,53 +114,100 @@
         "value": 100
       },
       "boat_speed": {
-        "condition": "boat_scale.value > 0",
+        "condition": "",
         "fraction": false,
         "max": 200,
         "min": 0,
-        "order": 29,
+        "order": 11,
         "precision": 1,
         "step": 5,
-        "text": "Boat Orbit Speed (%)",
+        "text": "Boat Cruising Speed (%)",
         "type": "slider",
         "value": 100
       },
       "boat_position": {
-        "condition": "boat_scale.value > 0",
+        "condition": "",
         "options": [
-          {
-            "label": "Right Pond (Scenic)",
-            "value": "right"
-          },
-          {
-            "label": "Left Pond",
-            "value": "left"
-          },
-          {
-            "label": "Top Right",
-            "value": "top-right"
-          },
-          {
-            "label": "Bottom Center",
-            "value": "bottom-center"
-          }
+          { "label": "Right Pond (Scenic)", "value": 0 },
+          { "label": "Left Pond", "value": 1 },
+          { "label": "Top Right", "value": 2 },
+          { "label": "Bottom Center", "value": 3 }
         ],
-        "order": 29,
+        "order": 12,
         "text": "Boat Anchor Position",
         "type": "combo",
-        "value": "right"
+        "value": 0
+      },
+      "scatter": {
+        "condition": "",
+        "order": 13,
+        "text": "Scatter Koi",
+        "type": "button",
+        "value": false
+      },
+      "reset": {
+        "condition": "",
+        "order": 14,
+        "text": "Reset Pond",
+        "type": "button",
+        "value": false
+      },
+      "visitorfrequency": {
+        "condition": "",
+        "options": [
+          { "label": "Balanced (~2 Mins)", "value": 0 },
+          { "label": "Often (~1 Min)", "value": 1 },
+          { "label": "Rare (~5 Mins)", "value": 2 },
+          { "label": "Disabled", "value": 3 }
+        ],
+        "order": 15,
+        "text": "Rare Visitor Frequency",
+        "type": "combo",
+        "value": 0
+      },
+      "mutationchance": {
+        "condition": "",
+        "fraction": false,
+        "max": 100,
+        "min": 0,
+        "order": 16,
+        "precision": 1,
+        "step": 5,
+        "text": "Mutation Metamorphosis Rate (%)",
+        "type": "slider",
+        "value": 70
+      },
+      "mutation_filter": {
+        "condition": "",
+        "options": [
+          { "label": "All 14 Varieties (Full Diversity)", "value": 0 },
+          { "label": "Luminescent & Celestial (Aurora, Umbra, Astraeus, Serene, Abyssal)", "value": 1 },
+          { "label": "Elemental & Prismatic (Frozen, Electric, Nuclear, Midas, Rainbow)", "value": 2 },
+          { "label": "Classic & Common (Crimson, Bunny, Ishmael)", "value": 3 },
+          { "label": "Natural Pure Koi (No Mutations)", "value": 4 }
+        ],
+        "order": 17,
+        "text": "Mutation Diversity Filter",
+        "type": "combo",
+        "value": 0
+      },
+      "framerate": {
+        "condition": "",
+        "options": [
+          { "label": "Native (Uncapped)", "value": "native" },
+          { "label": "60 FPS (Smooth)", "value": "60" },
+          { "label": "45 FPS (Balanced)", "value": "45" },
+          { "label": "30 FPS (Power Saver)", "value": "30" }
+        ],
+        "order": 18,
+        "text": "Frame Rate Limit",
+        "type": "combo",
+        "value": "native"
       }
-    },
-    "supportproperties": true
+    }
   },
   "preview": "preview.png",
-  "tags": [
-    "Nature",
-    "Relaxing",
-    "Interactive"
-  ],
   "title": "Interactive Koi Pond",
   "type": "web",
-  "version": 1,
-  "visibility": "public"
+  "version": 1
 }

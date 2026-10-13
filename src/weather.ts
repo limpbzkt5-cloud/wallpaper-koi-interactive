@@ -7,7 +7,7 @@ export type WeatherPresetId =
   | "moonlight"
   | "rain";
 
-export type WeatherSelectionMode = WeatherPresetId | "device_time" | "cycle";
+export type WeatherSelectionMode = WeatherPresetId | "device_time" | "cycle" | "manual";
 
 export type ColorTriplet = readonly [number, number, number];
 type Direction = readonly [number, number];

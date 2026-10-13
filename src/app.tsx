@@ -35,7 +35,6 @@ import {
   getWeatherForDeviceTime,
   WEATHER_CYCLE_SEQUENCE,
   type WeatherPresetId,
-  type WeatherSelectionMode,
 } from "./weather";
 import type { ClockMode } from "./pond-clock";
 
@@ -330,14 +329,15 @@ export function App() {
     let lastTransformBunnyVal: boolean | null = null;
     let lastTransformCrimsonVal: boolean | null = null;
     let lastTransformAbyssalVal: boolean | null = null;
-    let weatherMode: WeatherSelectionMode = "sunny";
+    let weatherControlMode: "manual" | "device_time" | "cycle" = "manual";
+    let manualWeatherPreset: WeatherPresetId = "sunny";
     let lastDevicePreset: WeatherPresetId | null = null;
     let deviceCheckTimer = 0;
     let cycleTimer = 0;
     let currentCycleIdx = 0;
 
-    const applyWeatherSelection = (mode: WeatherSelectionMode): void => {
-      weatherMode = mode;
+    const applyWeatherMode = (mode: "manual" | "device_time" | "cycle"): void => {
+      weatherControlMode = mode;
       if (mode === "device_time") {
         const target = getWeatherForDeviceTime();
         lastDevicePreset = target;
@@ -350,9 +350,49 @@ export function App() {
         settings.setWeather(target);
         renderer.setWeatherPreset(target);
       } else {
-        settings.setWeather(mode);
-        renderer.setWeatherPreset(mode);
+        settings.setWeather(manualWeatherPreset);
+        renderer.setWeatherPreset(manualWeatherPreset);
       }
+    };
+
+    const applyManualWeatherPreset = (preset: WeatherPresetId): void => {
+      manualWeatherPreset = preset;
+      if (weatherControlMode === "manual") {
+        settings.setWeather(preset);
+        renderer.setWeatherPreset(preset);
+      }
+    };
+
+    const applyMutationFilter = (filter: number | string): void => {
+      const allMuts = Object.values(FishMutation);
+      const celestial = [FishMutation.Aurora, FishMutation.Umbra, FishMutation.Astraeus, FishMutation.Serene, FishMutation.Abyssal];
+      const elemental = [FishMutation.Frozen, FishMutation.Electric, FishMutation.Nuclear, FishMutation.Midas, FishMutation.RainbowCluster];
+      const classic = [FishMutation.Crimson, FishMutation.Bunny, FishMutation.Ishmael];
+
+      let filterIdx = 0;
+      if (typeof filter === "number") {
+        filterIdx = filter;
+      } else if (typeof filter === "string") {
+        const lower = filter.toLowerCase();
+        if (lower.includes("celestial") || lower.includes("luminescent")) filterIdx = 1;
+        else if (lower.includes("elemental") || lower.includes("prismatic")) filterIdx = 2;
+        else if (lower.includes("classic") || lower.includes("common")) filterIdx = 3;
+        else if (lower.includes("natural") || lower.includes("none")) filterIdx = 4;
+        else filterIdx = 0;
+      }
+
+      for (const m of allMuts) {
+        if (m === FishMutation.None) continue;
+        let enabled = false;
+        if (filterIdx === 0) enabled = true;
+        else if (filterIdx === 1) enabled = celestial.includes(m);
+        else if (filterIdx === 2) enabled = elemental.includes(m);
+        else if (filterIdx === 3) enabled = classic.includes(m);
+        else if (filterIdx === 4) enabled = false;
+
+        school.setMutationEnabled(m, enabled);
+      }
+      school.enforceMutationCaps();
     };
 
     const frameLimiter = createFrameLimiter();
@@ -371,7 +411,7 @@ export function App() {
         simulationTime += FIXED_STEP;
 
         // Dynamic weather updates (Device Time Sync & Periodic Cycle)
-        if (weatherMode === "device_time") {
+        if (weatherControlMode === "device_time") {
           deviceCheckTimer += FIXED_STEP;
           if (deviceCheckTimer >= 10) {
             deviceCheckTimer = 0;
@@ -382,7 +422,7 @@ export function App() {
               renderer.setWeatherPreset(target);
             }
           }
-        } else if (weatherMode === "cycle") {
+        } else if (weatherControlMode === "cycle") {
           cycleTimer += FIXED_STEP;
           const CYCLE_INTERVAL = 180; // 3 minutes per preset
           if (cycleTimer >= CYCLE_INTERVAL) {
@@ -475,8 +515,20 @@ export function App() {
         const count = clamp(Math.round(Number(val)), 1, 48);
         settings.set(["koi", "initialCount"], count);
         school.setCount(count);
-      } else if (name === "weather") {
-        const modes: WeatherSelectionMode[] = [
+      } else if (name === "weather_mode") {
+        const modes: Array<"manual" | "device_time" | "cycle"> = ["manual", "device_time", "cycle"];
+        let mode: "manual" | "device_time" | "cycle" = "manual";
+        if (typeof val === "number" && val >= 0 && val < modes.length) {
+          mode = modes[val];
+        } else if (typeof val === "string") {
+          const lower = val.toLowerCase().trim();
+          if (lower.includes("device") || lower.includes("time")) mode = "device_time";
+          else if (lower.includes("cycle")) mode = "cycle";
+          else mode = "manual";
+        }
+        applyWeatherMode(mode);
+      } else if (name === "weather" || name === "weather_preset") {
+        const presets: WeatherPresetId[] = [
           "sunny",
           "sunset",
           "moonlight",
@@ -484,24 +536,26 @@ export function App() {
           "overcast",
           "mist",
           "deep-clear",
-          "device_time",
-          "cycle",
         ];
-        let selected: WeatherSelectionMode = "sunny";
-        if (typeof val === "number" && val >= 0 && val < modes.length) {
-          selected = modes[val];
+        let preset: WeatherPresetId = "sunny";
+        if (typeof val === "number" && val >= 0 && val < presets.length) {
+          preset = presets[val];
         } else if (typeof val === "string") {
           const lower = val.toLowerCase().trim();
-          if (lower.includes("device") || lower.includes("time") || lower === "device_time") {
-            selected = "device_time";
+          if (lower.includes("device") || lower.includes("time")) {
+            applyWeatherMode("device_time");
+            return;
           } else if (lower.includes("cycle")) {
-            selected = "cycle";
+            applyWeatherMode("cycle");
+            return;
           } else {
-            const found = modes.find((m) => lower.includes(m));
-            if (found) selected = found;
+            const found = presets.find((p) => lower.includes(p));
+            if (found) preset = found;
           }
         }
-        applyWeatherSelection(selected);
+        applyManualWeatherPreset(preset);
+      } else if (name === "mutation_filter") {
+        applyMutationFilter(val);
       } else if (name === "rain") {
         const enabled = toBool(val);
         settings.setRain(enabled);
@@ -603,17 +657,28 @@ export function App() {
         settings.set(["koi", "initialCount"], count);
         school.setCount(count);
       }
+      if (properties.weather_mode !== undefined && properties.weather_mode.value !== undefined) {
+        const raw = String(properties.weather_mode.value).toLowerCase().trim();
+        if (raw === "device_time" || raw.includes("device")) {
+          applyWeatherMode("device_time");
+        } else if (raw === "cycle") {
+          applyWeatherMode("cycle");
+        } else {
+          applyWeatherMode("manual");
+        }
+      }
       if (properties.weather !== undefined && properties.weather.value !== undefined) {
         const raw = String(properties.weather.value).toLowerCase().trim();
-        let selected: WeatherSelectionMode = "sunny";
         if (raw === "device_time" || raw.includes("device")) {
-          selected = "device_time";
+          applyWeatherMode("device_time");
         } else if (raw === "cycle") {
-          selected = "cycle";
+          applyWeatherMode("cycle");
         } else {
-          selected = raw as WeatherPresetId;
+          applyManualWeatherPreset(raw as WeatherPresetId);
         }
-        applyWeatherSelection(selected);
+      }
+      if (properties.mutation_filter !== undefined && properties.mutation_filter.value !== undefined) {
+        applyMutationFilter(properties.mutation_filter.value);
       }
       if (properties.rain !== undefined && properties.rain.value !== undefined) {
         const enabled = toBool(properties.rain.value);
