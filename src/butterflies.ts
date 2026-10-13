@@ -170,7 +170,19 @@ export class ButterflyPass {
   }
 
   private createButterflies(): Butterfly[] {
-    return BUTTERFLY_SPAWNS.map((spawn, index) => {
+    const spawns: { x: number; y: number; phase: number; palette: number }[] = [...BUTTERFLY_SPAWNS];
+    // Complementary ambient butterfly spawns across the pond for a livelier visual presence
+    const extraSpawns = [
+      { x: 168, y: 125, phase: 2.7, palette: 4 },
+      { x: 326, y: 148, phase: 4.1, palette: 5 },
+      { x: 220, y: 80, phase: 1.2, palette: 6 },
+      { x: 280, y: 200, phase: 5.6, palette: 7 },
+    ];
+    for (const extra of extraSpawns) {
+      if (spawns.length < 8) spawns.push(extra);
+    }
+
+    return spawns.map((spawn, index) => {
       const randomState = (0x9e3779b9 ^ ((index + 1) * 0x85ebca6b)) >>> 0;
       const placement = viewportPoint(spawn.x, spawn.y);
       const butterfly: Butterfly = {
@@ -197,7 +209,7 @@ export class ButterflyPass {
         curveFrequency: BUTTERFLIES.curvedFlightFrequency[0],
         speedPhase: spawn.phase * 1.73,
         phase: spawn.phase,
-        palette: spawn.palette,
+        palette: spawn.palette % (PALETTES.length || 1),
         randomState,
       };
       this.beginWander(butterfly);
@@ -215,8 +227,9 @@ export class ButterflyPass {
     this.shapeBatch.reset();
     this.lineBatch.reset();
 
+    const targetCount = BUTTERFLIES.visibleCount === 0 ? 0 : Math.max(BUTTERFLIES.visibleCount, 7);
     const visibleCount = Math.min(
-      BUTTERFLIES.visibleCount,
+      targetCount,
       this.butterflies.length,
     );
     for (let index = 0; index < visibleCount; index += 1) {

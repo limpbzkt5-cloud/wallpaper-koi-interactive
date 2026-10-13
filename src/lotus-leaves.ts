@@ -225,6 +225,34 @@ export class LotusLeavesPass {
     this.rebuild();
   }
 
+  public getLeafCount(): number {
+    return Math.min(LOTUS.visibleLeafCount, this.leaves.length);
+  }
+
+  public getLeafState(index: number): {
+    center: Point;
+    radius: number;
+    pushVel: Point;
+    displacement: number;
+    visible: boolean;
+  } | null {
+    if (index < 0 || index >= this.getLeafCount()) return null;
+    const center = this.leafCenters[index];
+    const leaf = LOTUS_LEAVES[index];
+    const dyn = this.leafDynamics[index];
+    if (!center || !leaf) return null;
+    const radius = leaf.radius * LOTUS.radiusScale;
+    const pushVel = dyn ? { x: dyn.pushVelX, y: dyn.pushVelY } : { x: 0, y: 0 };
+    const displacement = dyn ? Math.hypot(dyn.pushX, dyn.pushY) : 0;
+    return {
+      center: { x: center.x, y: center.y },
+      radius,
+      pushVel,
+      displacement,
+      visible: true,
+    };
+  }
+
   public update(time: number, ripples?: any): void {
     if (
       LOTUS_LEAVES.length !== this.leaves.length ||

@@ -280,4 +280,67 @@ describe("PixelBoat", () => {
     expect(boat.wakeTrail.mesh.visible).toBe(true);
     boat.dispose();
   });
+
+  it("handles mini anchor dropping, deceleration to stop, and hauling back up", () => {
+    const boat = new PixelBoat();
+    expect(boat.isAnchored()).toBe(false);
+    expect(boat.anchorState).toBe("stowed");
+    expect(boat.anchorDropProgress).toBe(0.0);
+
+    // Hit-test bow prow anchor zone
+    boat.facingLeft = true;
+    const anchorPoint = add(boat.options.position, vec(-BOAT_BASE_WIDTH * 0.40, 0));
+    expect(boat.hitTest(anchorPoint)).toBe("anchor");
+
+    // Drop anchor
+    let splashCalled = false;
+    const dropToggled = boat.toggleAnchor(() => {
+      splashCalled = true;
+    });
+    expect(dropToggled).toBe(true);
+    expect(boat.anchorState).toBe("dropping");
+
+    // Advance time through drop animation (~1.0s)
+    for (let t = 0; t < 1.2; t += 0.016) {
+      boat.update(t, null, "sunny");
+    }
+
+    // Must be fully anchored and stopped
+    expect(splashCalled).toBe(true);
+    expect(boat.isAnchored()).toBe(true);
+    expect(boat.anchorState).toBe("anchored");
+    expect(boat.state).toBe("anchored");
+    expect(boat.anchorDropProgress).toBe(1.0);
+
+    // Position should be frozen across subsequent frames
+    const anchoredPos = { ...boat.options.position };
+    for (let t = 1.2; t < 2.5; t += 0.016) {
+      boat.update(t, null, "sunny");
+    }
+    expect(boat.options.position.x).toBeCloseTo(anchoredPos.x, 3);
+    expect(boat.options.position.y).toBeCloseTo(anchoredPos.y, 3);
+
+    // Haul anchor back up
+    const haulToggled = boat.toggleAnchor();
+    expect(haulToggled).toBe(false);
+    expect(boat.anchorState).toBe("hauling");
+
+    // Advance time through haul animation (~0.8s)
+    for (let t = 2.5; t < 3.5; t += 0.016) {
+      boat.update(t, null, "sunny");
+    }
+
+    // Must be stowed and back to orbiting
+    expect(boat.isAnchored()).toBe(false);
+    expect(boat.anchorState).toBe("stowed");
+    expect(boat.state).toBe("orbiting");
+    expect(boat.anchorDropProgress).toBe(0.0);
+
+    // Should resume moving along orbit
+    const nextPos = { ...boat.options.position };
+    boat.update(3.6, null, "sunny");
+    expect(boat.options.position.x !== nextPos.x || boat.options.position.y !== nextPos.y).toBe(true);
+
+    boat.dispose();
+  });
 });

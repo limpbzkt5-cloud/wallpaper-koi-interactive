@@ -37,6 +37,7 @@ import { WeatherPass } from "./weather-pass";
 import type { WeatherPresetId } from "./weather";
 import { PondClock, type ClockMode } from "./pond-clock";
 import { PixelBoat } from "./pixel-boat";
+import { PondFaunaPass } from "./pond-fauna";
 
 const TRIANGLE_FLOAT_CAPACITY = 144_000;
 const LINE_FLOAT_CAPACITY = 18_000;
@@ -264,6 +265,7 @@ export class FishRenderer {
   private previewFamilyIndex: number | null = null;
   public readonly pondClock = new PondClock();
   public readonly pixelBoat = new PixelBoat();
+  public readonly pondFauna = new PondFaunaPass();
   private readonly underwaterClockScene = new THREE.Scene();
   private readonly floatingClockScene = new THREE.Scene();
   private activeWeatherId: WeatherPresetId = "sunny";
@@ -314,12 +316,14 @@ export class FishRenderer {
       this.duckweed.shadowGroup,
       this.butterflies.shadowGroup,
       this.pixelBoat.shadowGroup,
+      this.pondFauna.shadowGroup,
     );
     this.surfaceObjectScene.add(
       this.duckweed.group,
       this.lotusLeaves.group,
       this.butterflies.group,
       this.pixelBoat.group,
+      this.pondFauna.group,
     );
     this.weatherScene.add(this.weather.mesh);
 
@@ -448,6 +452,7 @@ export class FishRenderer {
   }
 
   public dispose(): void {
+    this.pondFauna.dispose();
     this.pixelBoat.dispose();
     this.pondClock.dispose();
     this.underwaterTarget.dispose();
@@ -536,6 +541,7 @@ export class FishRenderer {
     this.waterSurface.update(school, time);
     this.duckweed.update(time, school.ripples);
     this.lotusLeaves.update(time, school.ripples);
+    this.pondFauna.update(0.016, time, this.lotusLeaves, school.ripples, this.activeWeatherId);
     this.pondClock.update(new Date(), this.activeWeatherId, time, school.ripples);
     const clockCenter = vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);
 

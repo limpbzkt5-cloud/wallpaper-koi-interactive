@@ -7,9 +7,9 @@ import type { School } from "./school";
 import type { Koi } from "./koi";
 import { BoatWakeTrail } from "./boat-wake";
 
-export type BoatInteractionZone = "music" | "food" | null;
+export type BoatInteractionZone = "music" | "food" | "anchor" | null;
 export type BoatPositionPreset = "right" | "left" | "top-right" | "bottom-center";
-export type BoatState = "orbiting" | "dragging" | "returning";
+export type BoatState = "orbiting" | "dragging" | "returning" | "anchored";
 
 export interface PixelBoatOptions {
   scale: number; // 0.0 to 2.0 (0.0 = hidden)
@@ -195,6 +195,14 @@ export class PixelBoat {
   public facingLeft = true;
   private wakeTimer = 0;
   public readonly wakeTrail = new BoatWakeTrail();
+
+  // Mini Anchor state machine
+  public anchorState: "stowed" | "dropping" | "anchored" | "hauling" = "stowed";
+  public anchorDropProgress = 0.0; // 0.0 = stowed at bow gunwale, 1.0 = fully deployed in water
+  private anchorAnimTimer = 0.0;
+  private anchorSplashed = false;
+  private anchorSpeedFactor = 1.0;
+  private onAnchorSplash?: (pos: Vec2) => void;
 
   public constructor() {
     // 0. Stylized V-shaped Kelvin Wake Ribbons & Foam
@@ -449,6 +457,9 @@ export class PixelBoat {
    * distinguishing between Left Compartment (Music) and Right Compartment (Food).
    */
   public startDrag(pointerPos: Vec2): void {
+    if (this.anchorState !== "stowed") {
+      this.haulAnchorInstant();
+    }
     this.state = "dragging";
     this.options.position = { ...pointerPos };
   }
@@ -474,8 +485,65 @@ export class PixelBoat {
   }
 
   /**
+   * Whether the boat is currently stationary with its anchor dropped.
+   */
+  public isAnchored(): boolean {
+    return this.state === "anchored" || this.anchorState === "anchored";
+  }
+
+  /**
+   * Toggles the mini anchor: drops if cruising (smooth deceleration to stop),
+   * or hauls up if anchored (resumes orbital cruising).
+   */
+  public toggleAnchor(onSplash?: (pos: Vec2) => void): boolean {
+    if (this.anchorState === "stowed") {
+      this.dropAnchor(onSplash);
+      return true;
+    } else {
+      this.haulAnchor();
+      return false;
+    }
+  }
+
+  /**
+   * Deploys the mini anchor into the pond water, smoothly decelerating the boat to a full stop.
+   */
+  public dropAnchor(onSplash?: (pos: Vec2) => void): void {
+    if (this.anchorState === "dropping" || this.anchorState === "anchored") return;
+    this.anchorState = "dropping";
+    this.anchorAnimTimer = 0;
+    this.anchorSplashed = false;
+    this.onAnchorSplash = onSplash;
+    this.redrawSprite();
+  }
+
+  /**
+   * Hauls the mini anchor back up to the bow gunwale, allowing the boat to resume its orbital cruising.
+   */
+  public haulAnchor(): void {
+    if (this.anchorState === "hauling" || this.anchorState === "stowed") return;
+    this.anchorState = "hauling";
+    this.anchorAnimTimer = 0;
+    this.redrawSprite();
+  }
+
+  /**
+   * Instantly stows the anchor (e.g. when dragged by the user).
+   */
+  public haulAnchorInstant(): void {
+    this.anchorState = "stowed";
+    this.anchorDropProgress = 0.0;
+    this.anchorAnimTimer = 0;
+    this.anchorSpeedFactor = 1.0;
+    if (this.state === "anchored") {
+      this.state = "orbiting";
+    }
+    this.redrawSprite();
+  }
+
+  /**
    * Determine whether a pointer click/touch falls within the boat,
-   * distinguishing between Left Compartment (Music) and Right Compartment (Food).
+   * distinguishing between Mini Anchor (Bow), Gramophone (Mid-Deck), and Food Feeder (Stern).
    */
   public hitTest(point: Vec2): BoatInteractionZone {
     if (this.options.scale <= 0.001 || !this.group.visible) return null;
@@ -504,12 +572,22 @@ export class PixelBoat {
     const flipX = this.facingLeft ? 1 : -1;
     const orientedLocalX = localX * flipX;
 
+    // Bow Prow & Mini Anchor Zone (outer front prow of the boat):
+    // Also hit-tests the submerged anchor dangling in the water when deployed
+    const isAnchorDeployedZone =
+      this.anchorDropProgress > 0 &&
+      orientedLocalX < -BOAT_BASE_WIDTH * 0.15 &&
+      localY > 0;
+    if (orientedLocalX < -BOAT_BASE_WIDTH * 0.30 || isAnchorDeployedZone) {
+      return "anchor";
+    }
+
     // Right Compartment: Fish Food Feeder Tray (stern side)
     if (orientedLocalX >= 0) {
       return "food";
     }
 
-    // Left Compartment: Vintage Marshall Music Player (bow side)
+    // Left Compartment: Vintage Gramophone Music Player (mid-deck bow side)
     return "music";
   }
 
@@ -607,11 +685,55 @@ export class PixelBoat {
     this.orbitCenter.x = CANVAS_WIDTH * 0.5;
     this.orbitCenter.y = CANVAS_HEIGHT * 0.48;
 
-    // 2. Navigation State Machine: Orbiting vs Returning vs Dragging
+    // Anchor Animation & Deceleration Physics
+    if (this.anchorState === "dropping") {
+      this.anchorAnimTimer += dt;
+      const dropDuration = 0.95;
+      const progress = Math.min(1.0, this.anchorAnimTimer / dropDuration);
+      // Gravity drop: accelerates downwards
+      this.anchorDropProgress = Math.pow(progress, 1.5);
+      // Smooth quadratic deceleration ease-out to complete stop
+      this.anchorSpeedFactor = Math.pow(Math.max(0, 1.0 - progress), 2.0);
+
+      // Water splash ripple when anchor penetrates water surface (~70% drop)
+      if (progress >= 0.70 && !this.anchorSplashed) {
+        this.anchorSplashed = true;
+        const flipX = this.facingLeft ? 1 : -1;
+        const anchorOffset = vec(-BOAT_BASE_WIDTH * 0.38 * this.options.scale * flipX, 9.6 * this.options.scale);
+        const splashPos = add(this.options.position, anchorOffset);
+        this.onAnchorSplash?.(splashPos);
+        onWake?.(splashPos);
+      }
+
+      if (progress >= 1.0) {
+        this.anchorState = "anchored";
+        this.state = "anchored";
+        this.anchorSpeedFactor = 0.0;
+        this.anchorDropProgress = 1.0;
+      }
+      this.redrawSprite();
+    } else if (this.anchorState === "hauling") {
+      this.anchorAnimTimer += dt;
+      const haulDuration = 0.75;
+      const progress = Math.min(1.0, this.anchorAnimTimer / haulDuration);
+      // Steady winch cranking
+      this.anchorDropProgress = Math.max(0, 1.0 - progress);
+      this.anchorSpeedFactor = 0.0;
+
+      if (progress >= 1.0) {
+        this.anchorState = "stowed";
+        this.anchorDropProgress = 0.0;
+        this.state = "orbiting";
+        this.anchorSpeedFactor = 1.0;
+      }
+      this.redrawSprite();
+    }
+
+    // 2. Navigation State Machine: Orbiting vs Returning vs Dragging vs Anchored
     const prevPosition = vec(this.options.position.x, this.options.position.y);
 
     if (this.state === "orbiting") {
-      const currentOrbitSpeed = this.orbitSpeed * this.speedMultiplier;
+      const currentOrbitSpeed = this.orbitSpeed * this.speedMultiplier * this.anchorSpeedFactor;
       this.orbitAngle = (this.orbitAngle + currentOrbitSpeed * dt) % (Math.PI * 2);
       this.options.position = vec(
         this.orbitCenter.x + this.orbitRadiusX * Math.cos(this.orbitAngle),
@@ -619,14 +741,14 @@ export class PixelBoat {
       );
 
       // Tangential velocity vector: d/d theta [Rx cos theta, Ry sin theta] = [-Rx sin theta, Ry cos theta]
-      const vxTan = -this.orbitRadiusX * Math.sin(this.orbitAngle) * this.speedMultiplier;
+      const vxTan = -this.orbitRadiusX * Math.sin(this.orbitAngle) * this.speedMultiplier * this.anchorSpeedFactor;
       if (Math.abs(vxTan) > 0.005) {
         this.facingLeft = vxTan < 0;
       }
 
       // Gentle stern wake ripple (calm mouth ripples, no fish call)
-      if (this.speedMultiplier > 0.05) {
-        this.wakeTimer += dt * this.speedMultiplier;
+      if (this.speedMultiplier * this.anchorSpeedFactor > 0.05) {
+        this.wakeTimer += dt * this.speedMultiplier * this.anchorSpeedFactor;
         if (this.wakeTimer >= 0.85) {
           this.wakeTimer = 0;
           const sternOffsetX = (this.facingLeft ? 1 : -1) * BOAT_BASE_WIDTH * 0.32 * this.options.scale;
@@ -634,6 +756,9 @@ export class PixelBoat {
           onWake?.(sternPos);
         }
       }
+    } else if (this.state === "anchored") {
+      // Stationary when anchored: position is held firm, gentle harmonic water bobbing continues
+      this.wakeTimer = 0;
     } else if (this.state === "returning") {
       // Find closest rendezvous angle on the orbital ellipse
       const dx = (this.options.position.x - this.orbitCenter.x) / this.orbitRadiusX;
@@ -1305,6 +1430,71 @@ export class PixelBoat {
     rect(44, 31 + foodRecoilY, 6, 2, C_PELLET_ORANGE);
     px(45, 31 + foodRecoilY, C_PELLET_GOLD);
     px(48, 32 + foodRecoilY, C_PELLET_GOLD);
+
+    // 9. Handcrafted Mini Anchor & Deployable Iron Chain at Bow Prow
+    const C_ANCHOR_DARK = "#151e27";       // Deep forged iron outline
+    const C_ANCHOR_BODY = "#2c3e50";       // Heavy cast iron
+    const C_ANCHOR_STEEL = "#4a627a";      // Mid metallic tone
+    const C_ANCHOR_SHINE = "#95a5a6";      // Polished metal edge gleam
+    const C_CHAIN_IRON = "#566573";        // Chain link dark
+    const C_CHAIN_LIGHT = "#abb2b9";       // Chain link highlight
+
+    const anchorDropY = Math.round(this.anchorDropProgress * 22);
+    const anchorY = 21 + anchorDropY;
+    const hawseX = 7;
+    const hawseY = 21;
+
+    // A. Bow Hawse Hole Ring (Lỗ xỏ xích neo ở mũi thuyền)
+    rect(hawseX - 1, hawseY - 1, 3, 3, C_ANCHOR_DARK);
+    px(hawseX, hawseY, C_CHAIN_LIGHT);
+
+    // B. Deployable Iron Chain Links (Dây xích sắt)
+    if (anchorDropY > 0) {
+      for (let cy = hawseY + 1; cy < anchorY; cy++) {
+        if (cy % 2 === 0) {
+          px(hawseX, cy, C_CHAIN_LIGHT);
+          px(hawseX + 1, cy, C_CHAIN_IRON);
+        } else {
+          px(hawseX, cy, C_CHAIN_IRON);
+        }
+      }
+    }
+
+    // C. Handcrafted Pixel Art Mini Anchor (Mỏ neo sắt truyền thống)
+    const ax = 5; // Anchor center X
+    const ay = anchorY;
+
+    // 1. Top Shackle Ring
+    rect(ax + 1, ay, 3, 2, C_ANCHOR_DARK);
+    px(ax + 2, ay, C_ANCHOR_SHINE);
+    px(ax + 2, ay + 1, C_ANCHOR_BODY);
+
+    // 2. Stock (Horizontal crossbar)
+    rect(ax - 1, ay + 2, 7, 1, C_ANCHOR_BODY);
+    px(ax - 1, ay + 2, C_ANCHOR_SHINE); // Left ball cap
+    px(ax + 5, ay + 2, C_ANCHOR_SHINE); // Right ball cap
+    px(ax + 2, ay + 2, C_ANCHOR_STEEL); // Center collar
+
+    // 3. Shank (Vertical iron shaft)
+    rect(ax + 1, ay + 3, 2, 4, C_ANCHOR_BODY);
+    rect(ax + 2, ay + 3, 1, 4, C_ANCHOR_DARK); // Shadow line
+
+    // 4. Curved Arms & Flukes (Cặp móc neo uốn cong sắc nét)
+    px(ax - 1, ay + 5, C_ANCHOR_SHINE);  // Left fluke sharp palm
+    px(ax + 5, ay + 5, C_ANCHOR_SHINE);  // Right fluke sharp palm
+    px(ax, ay + 6, C_ANCHOR_STEEL);      // Left arm curve
+    px(ax + 4, ay + 6, C_ANCHOR_DARK);   // Right arm curve
+    rect(ax, ay + 7, 5, 1, C_ANCHOR_BODY); // Bottom crown curve
+    px(ax + 1, ay + 7, C_ANCHOR_STEEL);
+    px(ax + 2, ay + 8, C_ANCHOR_DARK);   // Crown center point
+
+    // 5. Water Surface Submersion Caustics (Khi mỏ neo chìm dưới nước)
+    if (ay >= 38) {
+      px(ax - 2, 47, "rgba(186, 230, 253, 0.45)");
+      px(ax + 6, 47, "rgba(186, 230, 253, 0.45)");
+      px(ax + 2, ay + 2, "rgba(103, 232, 249, 0.35)");
+      px(ax + 2, ay + 6, "rgba(103, 232, 249, 0.35)");
+    }
 
     // Commit offscreen canvas updates into Three.js texture
     this.texture.needsUpdate = true;

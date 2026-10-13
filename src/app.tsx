@@ -808,6 +808,7 @@ export function App() {
         return;
       }
 
+      renderer.pondFauna.notifyWaterDisturbed(pointerPos);
       school.callTo(pointerPos);
       if (soundEnabledRef.current && ambientAudioContextRef.current?.state === "suspended") {
         void ambientAudioContextRef.current.resume().catch(() => undefined);
@@ -861,7 +862,12 @@ export function App() {
           });
         } else {
           // Pure Click interaction
-          if (activeBoatInteraction.zone === "music") {
+          if (activeBoatInteraction.zone === "anchor") {
+            renderer.pixelBoat.toggleAnchor((splashPos) => {
+              school.ripples.trigger("touch", splashPos);
+            });
+            school.ripples.trigger("mouth", pointerPos);
+          } else if (activeBoatInteraction.zone === "music") {
             renderer.pixelBoat.triggerButtonFeedback("play");
             const nextSound = !soundEnabledRef.current;
             setAmbientSoundEnabled(nextSound);

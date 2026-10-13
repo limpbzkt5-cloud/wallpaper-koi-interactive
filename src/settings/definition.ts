@@ -758,7 +758,7 @@ const butterflyPalette = group({
 
 const butterflies = group(
   {
-    visibleCount: num({ default: 4, min: 0, max: 12, step: 1, int: true }),
+    visibleCount: num({ default: 4, min: 0, max: 16, step: 1, int: true }),
     edgeMargin: num({ default: 14, min: 0, max: 100, step: 1 }),
     bodyLength: num({ default: 3.8, min: 0, max: 20, step: 0.1 }),
     bodyWidth: num({ default: 0.32, min: 0, max: 5, step: 0.01 }),
