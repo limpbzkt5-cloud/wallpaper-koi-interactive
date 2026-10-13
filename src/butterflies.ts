@@ -227,7 +227,7 @@ export class ButterflyPass {
     this.shapeBatch.reset();
     this.lineBatch.reset();
 
-    const targetCount = BUTTERFLIES.visibleCount === 0 ? 0 : Math.max(BUTTERFLIES.visibleCount, 7);
+    const targetCount = BUTTERFLIES.visibleCount === 0 ? 0 : Math.max(BUTTERFLIES.visibleCount, 8);
     const visibleCount = Math.min(
       targetCount,
       this.butterflies.length,

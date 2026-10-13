@@ -8,7 +8,7 @@
 
 [![Three.js](https://img.shields.io/badge/Three.js-r186-blue.svg)](https://threejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-105%2F105%20Passing-brightgreen.svg)]()
+[![Vitest](https://img.shields.io/badge/Vitest-107%2F107%20Passing-brightgreen.svg)]()
 [![Wallpaper Engine](https://img.shields.io/badge/Wallpaper%20Engine-Compatible-orange.svg)]()
 [![Lively Wallpaper](https://img.shields.io/badge/Lively%20Wallpaper-Compatible-cyan.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -53,7 +53,11 @@
 - **Cross-Bundle Swimming Migration (~30s)**: Every ~30 seconds, the frog leaps into the water, performs graceful breaststroke swimming pulses across open water, and hops onto a lily pad in another corner.
 - **Tongue Strike Predation**: When a dragonfly hovers within tongue reach, the frog launches a rapid tongue strike, catches the prey, and swallows it with a gulp animation.
 - **Water Disturbance Escape**: Clicking the water or disturbing lily pads near the frog triggers an instant scared dive, swimming out of frame to safety before respawning.
-- **Fluttering Butterflies & Dragonflies**: 8 vibrant butterfly palettes dancing across the pond, accompanied by dragonflies with dynamic water shadows.
+- **Fluttering Butterflies**: 8 vibrant butterfly palettes dancing organically over water lilies and pond blossoms throughout the daytime.
+- **Diurnal / Nocturnal Wildlife Cycle**:
+  - **Daytime**: Butterflies flutter across the pond, dragonflies dart gracefully between lily pads, and the little frog rests and hunts.
+  - **Nighttime (Moonlight)**: Dragonflies and butterflies retire to sleep; the frog senses nightfall, performs an escape dive, and swims away from the pond.
+  - **Bioluminescent Fireflies (8 Fireflies)**: Exactly 8 glowing fireflies emerge under moonlight, drifting over dark water with additive bioluminescent halos and rhythmic luciferase flash pulsing.
 
 ### 🕒 Frosted Glassmorphism Pond Clock
 - **Refractive Optics**: Custom GLSL shader with surface normal bevels, Blinn-Phong specular rim reflection, internal caustics, and subtle fluid undulation.
@@ -203,7 +207,22 @@ $$
 v_{\text{swim}}(\phi) = v_{\text{base}} + v_{\text{stroke}} \sin^2(\pi \phi), \quad \phi = (t \cdot \nu_{\text{stroke}}) \bmod 1.0
 $$
 
-### 6. Frosted Glass Normals & Specular Rim Optics
+### 6. Nocturnal Firefly Bioluminescent Dynamics
+Each firefly $i \in \{1, \dots, 8\}$ exhibits planar harmonic meandering drift and non-linear periodic luciferase pulsing $I_i(t)$:
+
+$$
+\mathbf{v}_i(t) = \begin{bmatrix} v_0 \cos \theta_i(t) + A_x \sin(\omega_x t + i) \\ v_0 \sin \theta_i(t) + A_y \cos(\omega_y t + i) \end{bmatrix}, \quad \frac{d\theta_i}{dt} = \Omega \sin(\omega_\theta t + 2.1 i)
+$$
+
+The bioluminescent optical emission intensity combines ambient baseline radiance with a rhythmic luciferase flash curve:
+
+$$
+I_i(t) = \text{clamp}\left(I_{\text{ambient}} + I_{\text{flash}} \cdot \max\left(0, \sin(\omega_{\text{flash}} t + \phi_i)\right)^{2.2}, 0, 1\right)
+$$
+
+rendered using additive blending $\left(\mathbf{C}_{\text{dst}} \gets \mathbf{C}_{\text{dst}} + \mathbf{C}_{\text{src}} \cdot \alpha\right)$ to generate soft atmospheric halos over dark moonlight water.
+
+### 7. Frosted Glass Normals & Specular Rim Optics
 Surface normal vectors $\mathbf{n}_{\text{bevel}}$ are extracted via central difference gradient on font texture alpha channel $\alpha(x, y)$:
 
 $$
@@ -216,7 +235,7 @@ $$
 I_{\text{rim}} = \max\left(0, \mathbf{n}_{\text{bevel}} \cdot (-\mathbf{L})\right)^{2.5} \times \text{smoothstep}\left(0.10, 0.50, \|\mathbf{n}_{\text{bevel}}\|\right)
 $$
 
-### 7. Adaptive Viewport & Isotropic Resolution Scaling
+### 8. Adaptive Viewport & Isotropic Resolution Scaling
 For any monitor resolution $W_{\text{screen}} \times H_{\text{screen}}$ with aspect ratio $A = W_{\text{screen}} / H_{\text{screen}}$, the pixel-art simulation canvas dynamically sizes as:
 
 $$
@@ -245,7 +264,7 @@ npm install
 # Start local development server with Vite HMR
 npm run dev
 
-# Run full Vitest test suite (105 tests)
+# Run full Vitest test suite (107 tests)
 npm run test
 
 # Compile TypeScript and build production bundle

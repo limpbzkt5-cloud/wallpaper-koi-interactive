@@ -34,6 +34,20 @@ export interface Dragonfly {
   caught: boolean;
 }
 
+export interface Firefly {
+  id: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  driftAngle: number;
+  flashPhase: number;
+  flashFrequency: number;
+  haloRadius: number;
+  coreRadius: number;
+  color: { r: number; g: number; b: number };
+}
+
 const FROG_SPRITE_SIZE = 24;
 const DRAGONFLY_MAX = 2;
 const DRAGONFLY_COLORS = [
@@ -115,6 +129,17 @@ export class PondFaunaPass {
   private readonly tonguePosAttr: THREE.BufferAttribute;
   private readonly tongueColAttr: THREE.BufferAttribute;
   private readonly tongueMesh: THREE.Mesh;
+
+  // Fireflies dynamic vertex buffers (8 fireflies * 12 vertices: halo quad + bright core quad = 96 vertices)
+  public static readonly FIREFLY_COUNT = 8;
+  private static readonly MAX_FF_VERTS = PondFaunaPass.FIREFLY_COUNT * 12;
+  private readonly ffPositions = new Float32Array(PondFaunaPass.MAX_FF_VERTS * 3);
+  private readonly ffColors = new Float32Array(PondFaunaPass.MAX_FF_VERTS * 4);
+  private readonly ffGeometry = new THREE.BufferGeometry();
+  private readonly ffPosAttr: THREE.BufferAttribute;
+  private readonly ffColAttr: THREE.BufferAttribute;
+  private readonly ffMesh: THREE.Mesh;
+  private readonly fireflies: Firefly[] = [];
 
   // Frog State
   public frog = {
@@ -237,6 +262,51 @@ export class PondFaunaPass {
     this.tongueMesh.renderOrder = 21;
     this.group.add(this.tongueMesh);
 
+    // 4. Setup Firefly Dynamic Buffer Meshes (warm bioluminescent glow in night/moonlight)
+    this.ffPosAttr = new THREE.BufferAttribute(this.ffPositions, 3);
+    this.ffColAttr = new THREE.BufferAttribute(this.ffColors, 4);
+    this.ffPosAttr.setUsage(THREE.DynamicDrawUsage);
+    this.ffColAttr.setUsage(THREE.DynamicDrawUsage);
+    this.ffGeometry.setAttribute("position", this.ffPosAttr);
+    this.ffGeometry.setAttribute("color", this.ffColAttr);
+
+    const ffMaterial = new THREE.MeshBasicMaterial({
+      vertexColors: true,
+      transparent: true,
+      side: THREE.DoubleSide,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    this.ffMesh = new THREE.Mesh(this.ffGeometry, ffMaterial);
+    this.ffMesh.renderOrder = 24; // Floating luminous lights above everything
+    this.group.add(this.ffMesh);
+
+    // Initialize exactly 8 Fireflies with organic distributed placements across the pond
+    const marginX = 45;
+    const marginY = 35;
+    for (let i = 0; i < PondFaunaPass.FIREFLY_COUNT; i++) {
+      const fx = marginX + (i / (PondFaunaPass.FIREFLY_COUNT - 1)) * (CANVAS_WIDTH - 2 * marginX) + (Math.random() - 0.5) * 25;
+      const fy = marginY + ((i * 47) % (CANVAS_HEIGHT - 2 * marginY)) + (Math.random() - 0.5) * 20;
+      this.fireflies.push({
+        id: i,
+        x: clamp(fx, marginX, CANVAS_WIDTH - marginX),
+        y: clamp(fy, marginY, CANVAS_HEIGHT - marginY),
+        vx: (Math.random() - 0.5) * 6.0,
+        vy: (Math.random() - 0.5) * 6.0,
+        driftAngle: Math.random() * Math.PI * 2,
+        flashPhase: (i / PondFaunaPass.FIREFLY_COUNT) * Math.PI * 2 + Math.random() * 0.8,
+        flashFrequency: 1.8 + Math.random() * 1.4,
+        haloRadius: 4.2 + (i % 3) * 0.8,
+        coreRadius: 1.2 + (i % 2) * 0.3,
+        color: {
+          r: 0.85 + (i % 2) * 0.12,
+          g: 0.96,
+          b: 0.28 + (i % 3) * 0.15,
+        },
+      });
+    }
+
     // Initial frog drawing
     this.redrawFrog();
   }
@@ -249,21 +319,29 @@ export class PondFaunaPass {
     time: number,
     lotusLeaves?: LotusLeavesPass | null,
     ripples?: RippleSystem | null,
-    _weatherId: WeatherPresetId = "sunny",
+    weatherId: WeatherPresetId = "sunny",
   ): void {
+    const isNight = weatherId === "moonlight";
+
     // 1. Update Frog Lifecycle & State Machine
-    this.updateFrog(dt, time, lotusLeaves, ripples);
+    this.updateFrog(dt, time, isNight, lotusLeaves, ripples);
 
     // 2. Update Dragonflies
-    this.updateDragonflies(dt, time);
+    this.updateDragonflies(dt, time, isNight);
 
-    // 3. Commit Dragonfly Geometry
+    // 3. Update Fireflies (~8 fireflies at night)
+    this.updateFireflies(dt, time, isNight);
+
+    // 4. Commit Dragonfly Geometry
     this.commitDragonflyGeometry(time);
 
-    // 4. Commit Tongue Mesh
+    // 5. Commit Firefly Geometry
+    this.commitFireflyGeometry(time, isNight);
+
+    // 6. Commit Tongue Mesh
     this.commitTongueGeometry();
 
-    // 5. Update Frog Mesh Transforms
+    // 7. Update Frog Mesh Transforms
     this.updateFrogTransforms(time);
   }
 
@@ -283,31 +361,56 @@ export class PondFaunaPass {
   private updateFrog(
     dt: number,
     _time: number,
+    isNight: boolean,
     lotusLeaves?: LotusLeavesPass | null,
     ripples?: RippleSystem | null,
   ): void {
     const f = this.frog;
 
-    // Check respawn if despawned
+    // NIGHTTIME BEHAVIOR: Frog retreats from pond and stays despawned at night
+    if (isNight) {
+      if (f.state === "despawned") {
+        f.respawnTimer = 6.0; // Suspended until daylight returns
+        return;
+      }
+      if (
+        f.state === "sitting" ||
+        f.state === "jumping" ||
+        f.state === "tongue_strike" ||
+        f.state === "migrating_dive" ||
+        f.state === "migrating_land"
+      ) {
+        // Frog senses nightfall, cancels any hunting, and immediately dives to swim out of the pond
+        f.targetDragonfly = null;
+        f.tongueTarget = null;
+        this.triggerScareDive(ripples);
+        return;
+      }
+      // If scared_dive or swimming, continue execution below to finish swimming offscreen and despawn
+    }
+
+    // Check respawn if despawned (only during daytime)
     if (f.state === "despawned") {
-      f.respawnTimer -= dt;
-      if (f.respawnTimer <= 0 && lotusLeaves && lotusLeaves.getLeafCount() > 0) {
-        // Spawn on a random available lily pad
-        const count = lotusLeaves.getLeafCount();
-        const randIdx = Math.floor(Math.random() * count);
-        const leaf = lotusLeaves.getLeafState(randIdx);
-        if (leaf) {
-          f.leafIndex = randIdx;
-          f.x = leaf.center.x;
-          f.y = leaf.center.y;
-          f.z = 0;
-          f.state = "sitting";
-          f.stateTimer = 0;
-          f.idleJumpTimer = 22.0 + Math.random() * 16.0;
-          f.migrateTimer = 28.0 + Math.random() * 8.0;
-          f.targetLeafIndex = -1;
-          f.facingAngle = Math.random() * Math.PI * 2;
-          this.redrawFrog();
+      if (!isNight) {
+        f.respawnTimer -= dt;
+        if (f.respawnTimer <= 0 && lotusLeaves && lotusLeaves.getLeafCount() > 0) {
+          // Spawn on a random available lily pad
+          const count = lotusLeaves.getLeafCount();
+          const randIdx = Math.floor(Math.random() * count);
+          const leaf = lotusLeaves.getLeafState(randIdx);
+          if (leaf) {
+            f.leafIndex = randIdx;
+            f.x = leaf.center.x;
+            f.y = leaf.center.y;
+            f.z = 0;
+            f.state = "sitting";
+            f.stateTimer = 0;
+            f.idleJumpTimer = 22.0 + Math.random() * 16.0;
+            f.migrateTimer = 28.0 + Math.random() * 8.0;
+            f.targetLeafIndex = -1;
+            f.facingAngle = Math.random() * Math.PI * 2;
+            this.redrawFrog();
+          }
         }
       }
       return;
@@ -548,7 +651,7 @@ export class PondFaunaPass {
       const pad = 24.0;
       if (f.x < -pad || f.x > CANVAS_WIDTH + pad || f.y < -pad || f.y > CANVAS_HEIGHT + pad) {
         f.state = "despawned";
-        f.respawnTimer = 28.0 + Math.random() * 22.0; // Respawns after 28-50s
+        f.respawnTimer = isNight ? 10.0 : (28.0 + Math.random() * 22.0);
         this.redrawFrog();
       }
     } else if (f.state === "migrating_dive") {
@@ -680,11 +783,18 @@ export class PondFaunaPass {
     }
   }
 
-  private updateDragonflies(dt: number, time: number): void {
-    // 1. Spawn new dragonfly if capacity allows
+  private updateDragonflies(dt: number, time: number, isNight: boolean): void {
+    if (isNight) {
+      // Nighttime: strictly NO dragonflies in the pond at night
+      this.dragonflies.length = 0;
+      this.dragonflySpawnTimer = 8.0;
+      return;
+    }
+
+    // 1. Spawn new dragonfly if capacity allows (significantly reduced frequency)
     this.dragonflySpawnTimer -= dt;
     if (this.dragonflySpawnTimer <= 0 && this.dragonflies.length < DRAGONFLY_MAX) {
-      this.dragonflySpawnTimer = 18.0 + Math.random() * 16.0;
+      this.dragonflySpawnTimer = 30.0 + Math.random() * 25.0;
       this.spawnDragonfly();
     }
 
@@ -1101,8 +1211,129 @@ export class PondFaunaPass {
     this.frogTexture.needsUpdate = true;
   }
 
+  private updateFireflies(dt: number, time: number, isNight: boolean): void {
+    if (!isNight) {
+      this.ffMesh.visible = false;
+      return;
+    }
+    this.ffMesh.visible = true;
+
+    for (const ff of this.fireflies) {
+      // Advance rhythmic bioluminescent flash phase
+      ff.flashPhase = (ff.flashPhase + dt * ff.flashFrequency) % (Math.PI * 2);
+
+      // Gentle meandering drift with subtle pseudo-random steering
+      ff.driftAngle += Math.sin(time * 0.9 + ff.id * 2.1) * 1.5 * dt;
+
+      const speed = 10.0 + Math.sin(time * 1.3 + ff.id) * 3.5;
+      ff.vx = Math.cos(ff.driftAngle) * speed;
+      ff.vy = Math.sin(ff.driftAngle) * speed;
+
+      ff.x += ff.vx * dt;
+      ff.y += ff.vy * dt;
+
+      // Soft boundary repulsion keeping fireflies within comfortable pond bounds
+      const marginX = 30;
+      const marginY = 24;
+      if (ff.x < marginX && ff.vx < 0) {
+        ff.driftAngle = Math.PI - ff.driftAngle;
+        ff.x = marginX;
+      } else if (ff.x > CANVAS_WIDTH - marginX && ff.vx > 0) {
+        ff.driftAngle = Math.PI - ff.driftAngle;
+        ff.x = CANVAS_WIDTH - marginX;
+      }
+      if (ff.y < marginY && ff.vy < 0) {
+        ff.driftAngle = -ff.driftAngle;
+        ff.y = marginY;
+      } else if (ff.y > CANVAS_HEIGHT - marginY && ff.vy > 0) {
+        ff.driftAngle = -ff.driftAngle;
+        ff.y = CANVAS_HEIGHT - marginY;
+      }
+    }
+  }
+
+  private commitFireflyGeometry(time: number, isNight: boolean): void {
+    if (!isNight) {
+      this.ffGeometry.setDrawRange(0, 0);
+      return;
+    }
+
+    let cursor = 0;
+    const writeQuad = (
+      bufPos: Float32Array,
+      bufCol: Float32Array,
+      vCursor: number,
+      cx: number, cy: number,
+      halfW: number, halfH: number,
+      r: number, g: number, b: number, a: number,
+      z = 0.14,
+    ): number => {
+      const p0 = { x: cx - halfW, y: cy - halfH };
+      const p1 = { x: cx + halfW, y: cy - halfH };
+      const p2 = { x: cx + halfW, y: cy + halfH };
+      const p3 = { x: cx - halfW, y: cy + halfH };
+      const pts = [p0, p1, p2, p0, p2, p3];
+      for (let i = 0; i < 6; i++) {
+        const idx = vCursor + i;
+        bufPos[idx * 3] = pts[i].x;
+        bufPos[idx * 3 + 1] = pts[i].y;
+        bufPos[idx * 3 + 2] = z;
+
+        bufCol[idx * 4] = r;
+        bufCol[idx * 4 + 1] = g;
+        bufCol[idx * 4 + 2] = b;
+        bufCol[idx * 4 + 3] = a;
+      }
+      return vCursor + 6;
+    };
+
+    for (const ff of this.fireflies) {
+      if (cursor + 12 > PondFaunaPass.MAX_FF_VERTS) break;
+
+      // Natural firefly flash curve: sharp rhythmic emission + glowing tail
+      const sinVal = Math.sin(ff.flashPhase);
+      const flashFactor = Math.pow(Math.max(0, sinVal), 2.2);
+      const ambientGlow = 0.12 + 0.08 * Math.sin(time * 2.2 + ff.id);
+      const brightness = clamp(ambientGlow + flashFactor * 0.88, 0, 1);
+
+      // 1. Soft Luminous Halo (warm lime-yellow aura)
+      const haloA = brightness * 0.40;
+      cursor = writeQuad(
+        this.ffPositions, this.ffColors, cursor,
+        ff.x, ff.y,
+        ff.haloRadius, ff.haloRadius,
+        ff.color.r * 0.75, ff.color.g, ff.color.b * 0.25, haloA,
+        0.14,
+      );
+
+      // 2. Bright Bioluminescent Core (warm white-yellow light center)
+      const coreA = clamp(brightness * 1.15, 0, 1);
+      cursor = writeQuad(
+        this.ffPositions, this.ffColors, cursor,
+        ff.x, ff.y,
+        ff.coreRadius, ff.coreRadius,
+        1.0, 1.0, 0.65, coreA,
+        0.16,
+      );
+    }
+
+    this.ffPosAttr.clearUpdateRanges();
+    this.ffPosAttr.addUpdateRange(0, cursor * 3);
+    this.ffPosAttr.needsUpdate = true;
+
+    this.ffColAttr.clearUpdateRanges();
+    this.ffColAttr.addUpdateRange(0, cursor * 4);
+    this.ffColAttr.needsUpdate = true;
+
+    this.ffGeometry.setDrawRange(0, cursor);
+  }
+
   public getDragonflies(): readonly Dragonfly[] {
     return this.dragonflies;
+  }
+
+  public getFireflies(): readonly Firefly[] {
+    return this.fireflies;
   }
 
   public dispose(): void {
@@ -1116,6 +1347,9 @@ export class PondFaunaPass {
     (this.dfMesh.material as THREE.Material).dispose();
     this.dfShadowGeometry.dispose();
     (this.dfShadowMesh.material as THREE.Material).dispose();
+
+    this.ffGeometry.dispose();
+    (this.ffMesh.material as THREE.Material).dispose();
 
     this.tongueGeometry.dispose();
     (this.tongueMesh.material as THREE.Material).dispose();

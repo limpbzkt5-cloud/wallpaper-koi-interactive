@@ -541,6 +541,12 @@ export class FishRenderer {
     this.waterSurface.update(school, time);
     this.duckweed.update(time, school.ripples);
     this.lotusLeaves.update(time, school.ripples);
+    const isNight = this.activeWeatherId === "moonlight";
+    this.butterflies.group.visible = !isNight && previewIndex === null;
+    this.butterflies.shadowGroup.visible = !isNight && previewIndex === null;
+    if (!isNight && previewIndex === null) {
+      this.butterflies.update(time);
+    }
     this.pondFauna.update(0.016, time, this.lotusLeaves, school.ripples, this.activeWeatherId);
     this.pondClock.update(new Date(), this.activeWeatherId, time, school.ripples);
     const clockCenter = vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);

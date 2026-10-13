@@ -163,4 +163,68 @@ describe("PondFaunaPass", () => {
 
     fauna.dispose();
   });
+
+  it("removes dragonflies and triggers frog escape dive when weather changes to moonlight", () => {
+    const fauna = new PondFaunaPass();
+    // Simulate daytime to spawn a dragonfly
+    for (let t = 0; t <= 4.0; t += 0.1) {
+      fauna.update(0.1, t, null, null, "sunny");
+      if (fauna.getDragonflies().length > 0) break;
+    }
+    expect(fauna.frog.state).toBe("sitting");
+
+    // Switch to moonlight / night
+    fauna.update(0.016, 4.5, null, null, "moonlight");
+
+    // Dragonflies must be strictly 0 at night
+    expect(fauna.getDragonflies().length).toBe(0);
+
+    // Frog must trigger scare dive to escape the pond
+    expect(fauna.frog.state).toBe("scared_dive");
+
+    // Step through dive and swimming until offscreen despawn
+    for (let t = 0; t < 6.0; t += 0.05) {
+      fauna.update(0.05, 4.5 + t, null, null, "moonlight");
+      if ((fauna.frog.state as string) === "despawned") break;
+    }
+    expect(fauna.frog.state).toBe("despawned");
+
+    // Frog remains despawned while moonlight is active
+    for (let t = 0; t < 10.0; t += 0.5) {
+      fauna.update(0.5, 11.0 + t, null, null, "moonlight");
+      expect(fauna.frog.state).toBe("despawned");
+    }
+
+    fauna.dispose();
+  });
+
+  it("activates exactly 8 fireflies drifting during moonlight and deactivates during daytime", () => {
+    const fauna = new PondFaunaPass();
+    const fireflies = fauna.getFireflies();
+    expect(fireflies.length).toBe(8);
+
+    // Daytime: fireflies mesh is not visible
+    fauna.update(0.016, 1.0, null, null, "sunny");
+    const ffMesh = (fauna.group.children as any[]).find((c) => c.renderOrder === 24);
+    expect(ffMesh).toBeDefined();
+    expect(ffMesh.visible).toBe(false);
+
+    // Nighttime (moonlight): fireflies mesh is active and visible
+    fauna.update(0.016, 2.0, null, null, "moonlight");
+    expect(ffMesh.visible).toBe(true);
+
+    // Check firefly positions and attributes
+    for (const ff of fireflies) {
+      expect(ff.x).toBeGreaterThan(0);
+      expect(ff.y).toBeGreaterThan(0);
+      expect(ff.haloRadius).toBeGreaterThan(2.0);
+      expect(ff.coreRadius).toBeGreaterThan(0.5);
+    }
+
+    // Switch back to sunny: mesh hides again
+    fauna.update(0.016, 3.0, null, null, "sunny");
+    expect(ffMesh.visible).toBe(false);
+
+    fauna.dispose();
+  });
 });
