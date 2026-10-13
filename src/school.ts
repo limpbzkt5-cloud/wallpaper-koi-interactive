@@ -14,7 +14,6 @@ import {
   clamp,
   fromAngle,
   length,
-  lerp,
   mul,
   normalize,
   perpendicular,
@@ -26,6 +25,14 @@ import {
 } from "./math";
 import { RippleSystem } from "./ripple-system";
 import type { WeatherPresetId } from "./weather";
+
+const COLLISION_TEST_NODES = [0, 4, 7] as const;
+const COLLISION_PAIRS: readonly (readonly [number, number, number])[] = [
+  [0, 0, 18], // Head A to Head B
+  [0, 4, 16], // Head A to Mid B
+  [4, 0, 16], // Mid A to Head B
+  [4, 4, 18], // Mid A to Mid B
+];
 
 export class School {
   public readonly fish: Koi[] = Array.from({ length: MAX_FISH + 2 }, () => new Koi());
@@ -43,6 +50,9 @@ export class School {
   public scatterCenter: Vec2 | null = null;
   private lastFoodPos: Vec2 | null = null;
   private hadFoodPellets = false;
+
+  private readonly _desiredSteering: Vec2[] = Array.from({ length: MAX_FISH + 2 }, () => ({ x: 0, y: 0 }));
+  private readonly _desiredSpeed: number[] = new Array(MAX_FISH + 2).fill(0);
 
   public readonly maxVisitors = 2;
   public readonly visitorIndices = [MAX_FISH, MAX_FISH + 1];
@@ -138,6 +148,22 @@ export class School {
       list.push(this.visitorIndices[1]);
     }
     return list;
+  }
+
+  public readonly activeIndicesBuffer: number[] = [];
+
+  public getActiveIndicesInto(buffer: number[]): number {
+    buffer.length = 0;
+    for (let i = 0; i < this.count; i += 1) {
+      buffer.push(i);
+    }
+    if (this.visitorActive[0]) {
+      buffer.push(this.visitorIndices[0]);
+    }
+    if (this.visitorActive[1]) {
+      buffer.push(this.visitorIndices[1]);
+    }
+    return buffer.length;
   }
 
   public enforceMutationCaps(): void {
@@ -715,10 +741,10 @@ export class School {
     this.updateVisitor(dt, this.currentWeather);
     this.updateFishCycle(dt);
 
-    const active = this.activeIndices();
-    const desired: Vec2[] = [];
-    const desiredSpeed: number[] = [];
-    for (const index of active) {
+    this.getActiveIndicesInto(this.activeIndicesBuffer);
+    const active = this.activeIndicesBuffer;
+    for (let aIdx = 0; aIdx < active.length; aIdx += 1) {
+      const index = active[aIdx];
       const fish = this.fish[index];
       if (fish.mutation === FishMutation.Frozen) {
         this.updateFrozenDrift(fish, dt, time);
@@ -738,15 +764,18 @@ export class School {
       this.updateNaturalState(fish, dt);
       this.updateDepth(fish, dt);
       this.updateFeeding(fish, dt);
-      desired[index] = this.steeringFor(index, time);
-      desiredSpeed[index] = this.desiredSpeedFor(index);
+      const st = this.steeringFor(index, time);
+      this._desiredSteering[index].x = st.x;
+      this._desiredSteering[index].y = st.y;
+      this._desiredSpeed[index] = this.desiredSpeedFor(index);
     }
-    for (const index of active) {
+    for (let aIdx = 0; aIdx < active.length; aIdx += 1) {
+      const index = active[aIdx];
       const fish = this.fish[index];
       if (fish.mutation === FishMutation.Frozen) {
         continue;
       }
-      this.integrate(fish, desired[index], desiredSpeed[index], dt);
+      this.integrate(fish, this._desiredSteering[index], this._desiredSpeed[index], dt);
     }
     this.resolveFishCollisions(active, dt);
     this.tinyFish.update(dt, time);
@@ -994,68 +1023,88 @@ export class School {
       steering = add(steering, mul(fromAngle(fish.heading + wander), wanderWeight));
     }
 
-    let separation = vec();
-    let alignment = vec();
-    let cohesion = vec();
     let neighbours = 0;
-    let obstacleRepulsion = vec();
+    const obstacleRepulsion = { x: 0, y: 0 };
+    let cohesion = { x: 0, y: 0 };
+    let alignment = { x: 0, y: 0 };
+    const separation = { x: 0, y: 0 };
 
-    const others = this.activeIndices();
-    for (const other of others) {
+    const neighbourRadius = 42 + 12 * scatterIntensity;
+    const neighbourRadiusSq = neighbourRadius * neighbourRadius;
+    const comfortRadius = 26 + 10 * scatterIntensity;
+    const closeRadius = 14 + 5 * scatterIntensity;
+
+    const others = this.activeIndicesBuffer.length > 0 ? this.activeIndicesBuffer : this.activeIndices();
+    for (let oIdx = 0; oIdx < others.length; oIdx += 1) {
+      const other = others[oIdx];
       if (other === index) continue;
       const otherFish = this.fish[other];
-      const offset = sub(fish.position, otherFish.position);
-      const distance = length(offset);
-      if (distance < 0.001) continue;
-
-      const deltaDepth = Math.abs(fish.depth - otherFish.depth);
 
       // 1. Obstacle avoidance if the other fish is frozen inside an ice cube
       if (otherFish.mutation === FishMutation.Frozen) {
-        const iceCenter = lerp(otherFish.position, otherFish.spine[SPINE_NODES - 1], 0.5);
-        const iceOffset = sub(fish.position, iceCenter);
-        const iceDist = length(iceOffset);
+        const deltaDepth = Math.abs(fish.depth - otherFish.depth);
+        if (deltaDepth >= 0.30) continue;
+        const lastSpine = otherFish.spine[SPINE_NODES - 1];
+        const iceCenterX = (otherFish.position.x + lastSpine.x) * 0.5;
+        const iceCenterY = (otherFish.position.y + lastSpine.y) * 0.5;
         const iceAvoidRadius = Math.max(52, otherFish.bodyLength * 0.95);
-        if (iceDist < iceAvoidRadius && deltaDepth < 0.30) {
-          const depthWeight = Math.pow(Math.max(0, 1 - deltaDepth / 0.30), 2);
-          const pushWeight = (iceAvoidRadius - iceDist) / iceAvoidRadius;
-          const radial = normalize(iceOffset, forward);
-          // Radial repulsion
-          obstacleRepulsion = add(
-            obstacleRepulsion,
-            mul(radial, pushWeight * pushWeight * 7.5 * depthWeight),
-          );
-          // Tangential deflection to steer smoothly around the block
-          const tangent = perpendicular(radial);
-          const cross = forward.x * radial.y - forward.y * radial.x;
-          const side = cross >= 0 ? 1 : -1;
-          obstacleRepulsion = add(
-            obstacleRepulsion,
-            mul(tangent, side * pushWeight * 3.6 * depthWeight),
-          );
-        }
-        // Do not cohere or align with a frozen ice block
+        const dxIce = fish.position.x - iceCenterX;
+        if (Math.abs(dxIce) >= iceAvoidRadius) continue;
+        const dyIce = fish.position.y - iceCenterY;
+        if (Math.abs(dyIce) >= iceAvoidRadius) continue;
+        const distSqIce = dxIce * dxIce + dyIce * dyIce;
+        if (distSqIce >= iceAvoidRadius * iceAvoidRadius || distSqIce < 0.0001) continue;
+        const iceDist = Math.sqrt(distSqIce);
+        const depthWeight = Math.pow(Math.max(0, 1 - deltaDepth / 0.30), 2);
+        const pushWeight = (iceAvoidRadius - iceDist) / iceAvoidRadius;
+        const invIceDist = 1 / iceDist;
+        const radX = dxIce * invIceDist;
+        const radY = dyIce * invIceDist;
+        const repFactor = pushWeight * pushWeight * 7.5 * depthWeight;
+        obstacleRepulsion.x += radX * repFactor;
+        obstacleRepulsion.y += radY * repFactor;
+        const cross = forward.x * radY - forward.y * radX;
+        const side = cross >= 0 ? 1 : -1;
+        const defFactor = side * pushWeight * 3.6 * depthWeight;
+        obstacleRepulsion.x += -radY * defFactor;
+        obstacleRepulsion.y += radX * defFactor;
         continue;
       }
 
-      // 2. Normal schooling and depth-weighted separation (dynamically and gently expanded during scatter)
-      const neighbourRadius = 42 + 12 * scatterIntensity;
-      if (distance < neighbourRadius) {
-        neighbours += 1;
-        cohesion = add(cohesion, otherFish.position);
-        alignment = add(alignment, normalize(otherFish.velocity, forward));
+      // 2. Normal schooling and depth-weighted separation
+      const dx = fish.position.x - otherFish.position.x;
+      if (Math.abs(dx) >= neighbourRadius) continue;
+      const dy = fish.position.y - otherFish.position.y;
+      if (Math.abs(dy) >= neighbourRadius) continue;
+      const distSquared = dx * dx + dy * dy;
+      if (distSquared >= neighbourRadiusSq || distSquared < 0.0001) continue;
 
-        const comfortRadius = 26 + 10 * scatterIntensity;
-        const closeRadius = 14 + 5 * scatterIntensity;
-        if (distance < comfortRadius && deltaDepth < 0.22) {
-          const depthWeight = Math.pow(Math.max(0, 1 - deltaDepth / 0.22), 2);
-          const linearPush = (comfortRadius - distance) / comfortRadius;
-          const emergencyPush = closeRadius / Math.max(distance, 2.5);
-          const pushMagnitude = (linearPush + emergencyPush * 0.75) * depthWeight * (1 + 0.35 * scatterIntensity);
-          separation = add(separation, mul(normalize(offset, forward), pushMagnitude));
-        }
+      const distance = Math.sqrt(distSquared);
+      const deltaDepth = Math.abs(fish.depth - otherFish.depth);
+
+      neighbours += 1;
+      cohesion.x += otherFish.position.x;
+      cohesion.y += otherFish.position.y;
+      const oSpeed = Math.sqrt(otherFish.velocity.x * otherFish.velocity.x + otherFish.velocity.y * otherFish.velocity.y);
+      if (oSpeed > 0.0001) {
+        alignment.x += otherFish.velocity.x / oSpeed;
+        alignment.y += otherFish.velocity.y / oSpeed;
+      } else {
+        alignment.x += forward.x;
+        alignment.y += forward.y;
+      }
+
+      if (distance < comfortRadius && deltaDepth < 0.22) {
+        const depthWeight = Math.pow(Math.max(0, 1 - deltaDepth / 0.22), 2);
+        const linearPush = (comfortRadius - distance) / comfortRadius;
+        const emergencyPush = closeRadius / Math.max(distance, 2.5);
+        const pushMagnitude = (linearPush + emergencyPush * 0.75) * depthWeight * (1 + 0.35 * scatterIntensity);
+        const invDist = 1 / distance;
+        separation.x += dx * invDist * pushMagnitude;
+        separation.y += dy * invDist * pushMagnitude;
       }
     }
+
 
     if (neighbours > 0) {
       cohesion = normalize(sub(mul(cohesion, 1 / neighbours), fish.position), forward);
@@ -1209,27 +1258,49 @@ export class School {
 
     fish.speed += (desiredSpeed - fish.speed) * (1 - Math.exp(-speedResponse * dt));
     fish.tailEffort += (desiredTailEffort - fish.tailEffort) * (1 - Math.exp(-4.5 * dt));
-    fish.velocity = mul(fromAngle(fish.heading), fish.speed);
-    fish.position = add(fish.position, mul(fish.velocity, dt));
+    const hCos = Math.cos(fish.heading);
+    const hSin = Math.sin(fish.heading);
+    fish.velocity.x = hCos * fish.speed;
+    fish.velocity.y = hSin * fish.speed;
+    fish.position.x += fish.velocity.x * dt;
+    fish.position.y += fish.velocity.y * dt;
 
     const beatRate = 0.45 + (fish.speed / fish.maximumSpeed) * 4.6 + fish.tailEffort * 0.9;
     fish.swimPhase += beatRate * dt;
 
-    fish.spine[0] = { ...fish.position };
+    fish.spine[0].x = fish.position.x;
+    fish.spine[0].y = fish.position.y;
     const spacing = fish.bodyLength / (SPINE_NODES - 1);
     const MAX_TOTAL_BODY_CURVATURE = 0.92; // ~52.7 degrees maximum cumulative bend head-to-tail
     let cumulativeBend = 0;
 
-    for (let node = 1; node < SPINE_NODES; node += 1) {
-      const fallback = mul(fromAngle(fish.heading), -1);
-      const prevDir =
-        node === 1
-          ? fallback
-          : normalize(sub(fish.spine[node - 1], fish.spine[node - 2]), fallback);
-      const prevAngle = Math.atan2(prevDir.y, prevDir.x);
+    const fallbackX = -hCos;
+    const fallbackY = -hSin;
 
-      const rawDir = normalize(sub(fish.spine[node], fish.spine[node - 1]), fallback);
-      const rawAngle = Math.atan2(rawDir.y, rawDir.x);
+    for (let node = 1; node < SPINE_NODES; node += 1) {
+      let prevDirX = fallbackX;
+      let prevDirY = fallbackY;
+      if (node > 1) {
+        const pdx = fish.spine[node - 1].x - fish.spine[node - 2].x;
+        const pdy = fish.spine[node - 1].y - fish.spine[node - 2].y;
+        const pdLen = Math.sqrt(pdx * pdx + pdy * pdy);
+        if (pdLen > 0.0001) {
+          prevDirX = pdx / pdLen;
+          prevDirY = pdy / pdLen;
+        }
+      }
+      const prevAngle = Math.atan2(prevDirY, prevDirX);
+
+      let rawDirX = fallbackX;
+      let rawDirY = fallbackY;
+      const rdx = fish.spine[node].x - fish.spine[node - 1].x;
+      const rdy = fish.spine[node].y - fish.spine[node - 1].y;
+      const rdLen = Math.sqrt(rdx * rdx + rdy * rdy);
+      if (rdLen > 0.0001) {
+        rawDirX = rdx / rdLen;
+        rawDirY = rdy / rdLen;
+      }
+      const rawAngle = Math.atan2(rawDirY, rawDirX);
       const angleDiff = wrapAngle(rawAngle - prevAngle);
 
       // Cephalocaudal stiffness gradient: head and thorax (cranium/organs) are rigid, tail is flexible
@@ -1242,15 +1313,25 @@ export class School {
       const clampedDiff = clamp(angleDiff, -maxBendThisNode, maxBendThisNode);
       cumulativeBend += clampedDiff;
 
-      const constrainedDir = fromAngle(prevAngle + clampedDiff);
-      const constrained = add(fish.spine[node - 1], mul(constrainedDir, spacing));
+      const cAngle = prevAngle + clampedDiff;
+      const constrDirX = Math.cos(cAngle);
+      const constrDirY = Math.sin(cAngle);
+      const constrX = fish.spine[node - 1].x + constrDirX * spacing;
+      const constrY = fish.spine[node - 1].y + constrDirY * spacing;
 
       // Anatomical stiffness preservation
       const stiffness = 0.95 - t * 0.15;
-      const smoothed = lerp(fish.spine[node], constrained, stiffness);
+      const smoothX = fish.spine[node].x + (constrX - fish.spine[node].x) * stiffness;
+      const smoothY = fish.spine[node].y + (constrY - fish.spine[node].y) * stiffness;
+
       // Strictly preserve segment spacing to prevent spine stretching or compression
-      const finalDir = normalize(sub(smoothed, fish.spine[node - 1]), constrainedDir);
-      fish.spine[node] = add(fish.spine[node - 1], mul(finalDir, spacing));
+      const fdx = smoothX - fish.spine[node - 1].x;
+      const fdy = smoothY - fish.spine[node - 1].y;
+      const fdLen = Math.sqrt(fdx * fdx + fdy * fdy);
+      const finalDirX = fdLen > 0.0001 ? fdx / fdLen : constrDirX;
+      const finalDirY = fdLen > 0.0001 ? fdy / fdLen : constrDirY;
+      fish.spine[node].x = fish.spine[node - 1].x + finalDirX * spacing;
+      fish.spine[node].y = fish.spine[node - 1].y + finalDirY * spacing;
     }
   }
 
@@ -1275,13 +1356,19 @@ export class School {
 
         if (isFrozenA && isFrozenB) {
           // Case 1: Ice cube vs Ice cube collision
-          const centerA = lerp(fishA.position, fishA.spine[SPINE_NODES - 1], 0.5);
-          const centerB = lerp(fishB.position, fishB.spine[SPINE_NODES - 1], 0.5);
-          const dx = centerA.x - centerB.x;
-          const dy = centerA.y - centerB.y;
-          const dist = Math.hypot(dx, dy);
+          const spineA = fishA.spine[SPINE_NODES - 1];
+          const spineB = fishB.spine[SPINE_NODES - 1];
+          const centerAx = (fishA.position.x + spineA.x) * 0.5;
+          const centerAy = (fishA.position.y + spineA.y) * 0.5;
+          const centerBx = (fishB.position.x + spineB.x) * 0.5;
+          const centerBy = (fishB.position.y + spineB.y) * 0.5;
+          const dx = centerAx - centerBx;
+          const dy = centerAy - centerBy;
           const minIceDist = (fishA.bodyLength + fishB.bodyLength) * 0.65;
-          if (dist < minIceDist && dist > 0.001) {
+          if (Math.abs(dx) >= minIceDist || Math.abs(dy) >= minIceDist) continue;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < minIceDist * minIceDist && distSq > 0.0001) {
+            const dist = Math.sqrt(distSq);
             const overlap = minIceDist - dist;
             const nx = dx / dist;
             const ny = dy / dist;
@@ -1301,22 +1388,25 @@ export class School {
           if (deltaDepth > 0.28) continue;
           const depthWeight = Math.pow(1 - deltaDepth / 0.28, 2);
 
-          const iceCenter = lerp(frozen.position, frozen.spine[SPINE_NODES - 1], 0.5);
+          const frozenSpine = frozen.spine[SPINE_NODES - 1];
+          const iceCenterX = (frozen.position.x + frozenSpine.x) * 0.5;
+          const iceCenterY = (frozen.position.y + frozenSpine.y) * 0.5;
           const iceRadius = frozen.bodyLength * 0.65 + frozen.bodyWidth * 0.4;
 
           // Check living fish head, mid-body, and rear body against ice volume
-          const testNodes = [0, 4, 7];
           let maxPenetration = 0;
           let pushNx = 0;
           let pushNy = 0;
 
-          for (const nodeIdx of testNodes) {
+          for (const nodeIdx of COLLISION_TEST_NODES) {
             const pt = living.spine[nodeIdx];
-            const dx = pt.x - iceCenter.x;
-            const dy = pt.y - iceCenter.y;
-            const dist = Math.hypot(dx, dy);
+            const dx = pt.x - iceCenterX;
+            const dy = pt.y - iceCenterY;
             const clearance = iceRadius + (nodeIdx === 0 ? 10 : 8);
-            if (dist < clearance && dist > 0.001) {
+            if (Math.abs(dx) >= clearance || Math.abs(dy) >= clearance) continue;
+            const distSq = dx * dx + dy * dy;
+            if (distSq < clearance * clearance && distSq > 0.0001) {
+              const dist = Math.sqrt(distSq);
               const penetration = clearance - dist;
               if (penetration > maxPenetration) {
                 maxPenetration = penetration;
@@ -1348,25 +1438,21 @@ export class School {
 
         // Case 3: Living fish vs Living fish
         if (deltaDepth > 0.22) continue;
+        if (Math.abs(fishA.position.x - fishB.position.x) > 38 || Math.abs(fishA.position.y - fishB.position.y) > 38) continue;
         const depthWeight = Math.pow(1 - deltaDepth / 0.22, 2);
-
-        // Check head-to-head and head-to-midbody to prevent ghost clipping
-        const pairs: Array<[number, number, number]> = [
-          [0, 0, 18], // Head A to Head B
-          [0, 4, 16], // Head A to Mid B
-          [4, 0, 16], // Mid A to Head B
-          [4, 4, 18], // Mid A to Mid B
-        ];
 
         let maxOverlap = 0;
         let colNx = 0;
         let colNy = 0;
 
-        for (const [nA, nB, reqDist] of pairs) {
+        for (const [nA, nB, reqDist] of COLLISION_PAIRS) {
           const dx = fishA.spine[nA].x - fishB.spine[nB].x;
+          if (Math.abs(dx) >= reqDist) continue;
           const dy = fishA.spine[nA].y - fishB.spine[nB].y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < reqDist && dist > 0.001) {
+          if (Math.abs(dy) >= reqDist) continue;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < reqDist * reqDist && distSq > 0.0001) {
+            const dist = Math.sqrt(distSq);
             const overlap = reqDist - dist;
             if (overlap > maxOverlap) {
               maxOverlap = overlap;

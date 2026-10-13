@@ -143,6 +143,54 @@ class GeometryBatch {
     this.cursor += 3;
   }
 
+  public pointDirect(x: number, y: number, color: THREE.Color = DEFAULT_COLOR): void {
+    if (this.cursor + 3 > this.values.length) return;
+    this.values[this.cursor] = this.previewOrigin
+      ? CANVAS_WIDTH * 0.5 + (x - this.previewOrigin.x) * this.previewScale
+      : x;
+    this.values[this.cursor + 1] = this.previewOrigin
+      ? CANVAS_HEIGHT * 0.5 + (y - this.previewOrigin.y) * this.previewScale
+      : y;
+    this.values[this.cursor + 2] = 0;
+    if (this.colorValues) {
+      this.colorValues[this.cursor] = color.r;
+      this.colorValues[this.cursor + 1] = color.g;
+      this.colorValues[this.cursor + 2] = color.b;
+    }
+    this.cursor += 3;
+  }
+
+  public triangleDirect(
+    ax: number,
+    ay: number,
+    bx: number,
+    by: number,
+    cx: number,
+    cy: number,
+    color: THREE.Color = DEFAULT_COLOR,
+  ): void {
+    this.pointDirect(ax, ay, color);
+    this.pointDirect(bx, by, color);
+    this.pointDirect(cx, cy, color);
+  }
+
+  public circleDirect(
+    cx: number,
+    cy: number,
+    radius: number,
+    color: THREE.Color = DEFAULT_COLOR,
+    segments = 12,
+  ): void {
+    const step = (Math.PI * 2) / segments;
+    for (let index = 0; index < segments; index += 1) {
+      const angleA = index * step;
+      const angleB = (index + 1) * step;
+      this.pointDirect(cx, cy, color);
+      this.pointDirect(cx + Math.cos(angleA) * radius, cy + Math.sin(angleA) * radius, color);
+      this.pointDirect(cx + Math.cos(angleB) * radius, cy + Math.sin(angleB) * radius, color);
+    }
+  }
+
   public triangle(a: Vec2, b: Vec2, c: Vec2, color: THREE.Color = DEFAULT_COLOR): void {
     this.point(a, color);
     this.point(b, color);
@@ -268,6 +316,8 @@ export class FishRenderer {
   public readonly pondFauna = new PondFaunaPass();
   private readonly underwaterClockScene = new THREE.Scene();
   private readonly floatingClockScene = new THREE.Scene();
+  private readonly sortedActiveBuffer: number[] = [];
+  private readonly clockCenterPos = vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);
   private activeWeatherId: WeatherPresetId = "sunny";
 
   public constructor(canvas: HTMLCanvasElement) {
@@ -510,11 +560,11 @@ export class FishRenderer {
       batch.setPreviewTransform(transformOrigin, previewIndex === null ? 1 : 1.6);
     }
 
-    const active = school.activeIndices();
-    const sortedActive = [...active].sort(
+    school.getActiveIndicesInto(this.sortedActiveBuffer);
+    this.sortedActiveBuffer.sort(
       (a, b) => school.fish[b].depth - school.fish[a].depth,
     );
-    for (const index of sortedActive) {
+    for (const index of this.sortedActiveBuffer) {
       if (previewIndex !== null && index !== selectedFishIndex) continue;
       const fish = school.fish[index];
       this.buildRenderSpine(fish);
@@ -549,7 +599,6 @@ export class FishRenderer {
     }
     this.pondFauna.update(0.016, time, this.lotusLeaves, school.ripples, this.activeWeatherId);
     this.pondClock.update(new Date(), this.activeWeatherId, time, school.ripples);
-    const clockCenter = vec(CANVAS_WIDTH * 0.5, CANVAS_HEIGHT * 0.48);
 
     this.pixelBoat.update(
       time,
@@ -559,7 +608,7 @@ export class FishRenderer {
         school.ripples.trigger("touch", splashPos);
         school.callTo(splashPos);
       },
-      clockCenter,
+      this.clockCenterPos,
       (wakePos) => {
         school.ripples.trigger("mouth", wakePos);
       },
@@ -594,16 +643,22 @@ export class FishRenderer {
   }
 
   private buildRenderSpine(fish: Koi): void {
-    fish.renderSpine[0] = { ...fish.spine[0] };
+    fish.renderSpine[0].x = fish.spine[0].x;
+    fish.renderSpine[0].y = fish.spine[0].y;
+    const hCos = Math.cos(fish.heading);
+    const hSin = Math.sin(fish.heading);
     for (let node = 1; node < SPINE_NODES; node += 1) {
       const t = node / (SPINE_NODES - 1);
       const previous = Math.max(0, node - 1);
       const next = Math.min(SPINE_NODES - 1, node + 1);
-      const tangent = normalize(
-        sub(fish.spine[previous], fish.spine[next]),
-        fromAngle(fish.heading),
-      );
-      const normal = perpendicular(tangent);
+      const dx = fish.spine[previous].x - fish.spine[next].x;
+      const dy = fish.spine[previous].y - fish.spine[next].y;
+      const dLen = Math.sqrt(dx * dx + dy * dy);
+      const tx = dLen > 0.0001 ? dx / dLen : hCos;
+      const ty = dLen > 0.0001 ? dy / dLen : hSin;
+      const nx = -ty;
+      const ny = tx;
+
       // Posterior concentration: head and pectoral thorax remain stable, propulsion concentrated in caudal tail
       const waveEnvelope = Math.pow(t, 2.2);
       const wave =
@@ -614,7 +669,8 @@ export class FishRenderer {
             0.65 *
             waveEnvelope *
             (0.10 + fish.tailEffort * 0.90);
-      fish.renderSpine[node] = add(fish.spine[node], mul(normal, wave));
+      fish.renderSpine[node].x = fish.spine[node].x + nx * wave;
+      fish.renderSpine[node].y = fish.spine[node].y + ny * wave;
     }
   }
 
@@ -702,51 +758,31 @@ export class FishRenderer {
   }
 
   private addShadowTriangle(a: Vec2, b: Vec2, c: Vec2): void {
-    const shadowOffset = {
-      x:
-        FISH.shadow.offset.x +
-        FISH.shadow.depthOffset.x * this.currentVisualDepth,
-      y:
-        FISH.shadow.offset.y +
-        FISH.shadow.depthOffset.y * this.currentVisualDepth,
-    };
+    const ox = FISH.shadow.offset.x + FISH.shadow.depthOffset.x * this.currentVisualDepth;
+    const oy = FISH.shadow.offset.y + FISH.shadow.depthOffset.y * this.currentVisualDepth;
     const opacity =
       FISH.shadow.surfaceOpacity +
       (FISH.shadow.deepOpacity - FISH.shadow.surfaceOpacity) *
         this.currentVisualDepth;
-    this.shadowStrengthColor.setRGB(
-      opacity,
-      opacity,
-      opacity,
-    );
-    this.shadowTriangles.triangle(
-      add(a, shadowOffset),
-      add(b, shadowOffset),
-      add(c, shadowOffset),
+    this.shadowStrengthColor.setRGB(opacity, opacity, opacity);
+    this.shadowTriangles.triangleDirect(
+      a.x + ox, a.y + oy,
+      b.x + ox, b.y + oy,
+      c.x + ox, c.y + oy,
       this.shadowStrengthColor,
     );
   }
 
   private addShadowCircle(center: Vec2, radius: number): void {
-    const shadowOffset = {
-      x:
-        FISH.shadow.offset.x +
-        FISH.shadow.depthOffset.x * this.currentVisualDepth,
-      y:
-        FISH.shadow.offset.y +
-        FISH.shadow.depthOffset.y * this.currentVisualDepth,
-    };
+    const ox = FISH.shadow.offset.x + FISH.shadow.depthOffset.x * this.currentVisualDepth;
+    const oy = FISH.shadow.offset.y + FISH.shadow.depthOffset.y * this.currentVisualDepth;
     const opacity =
       FISH.shadow.surfaceOpacity +
       (FISH.shadow.deepOpacity - FISH.shadow.surfaceOpacity) *
         this.currentVisualDepth;
-    this.shadowStrengthColor.setRGB(
-      opacity,
-      opacity,
-      opacity,
-    );
-    this.shadowTriangles.circle(
-      add(center, shadowOffset),
+    this.shadowStrengthColor.setRGB(opacity, opacity, opacity);
+    this.shadowTriangles.circleDirect(
+      center.x + ox, center.y + oy,
       radius,
       this.shadowStrengthColor,
     );

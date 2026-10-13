@@ -12,7 +12,18 @@ export const mul = (value: Vec2, scalar: number): Vec2 => ({
 });
 export const lerp = (a: Vec2, b: Vec2, amount: number): Vec2 =>
   add(a, mul(sub(b, a), amount));
-export const length = (value: Vec2): number => Math.hypot(value.x, value.y);
+export const lengthSq = (value: Vec2): number => value.x * value.x + value.y * value.y;
+export const length = (value: Vec2): number => Math.sqrt(value.x * value.x + value.y * value.y);
+export const distSq = (ax: number, ay: number, bx: number, by: number): number => {
+  const dx = ax - bx;
+  const dy = ay - by;
+  return dx * dx + dy * dy;
+};
+export const dist = (ax: number, ay: number, bx: number, by: number): number => {
+  const dx = ax - bx;
+  const dy = ay - by;
+  return Math.sqrt(dx * dx + dy * dy);
+};
 export const normalize = (value: Vec2, fallback: Vec2 = vec(1, 0)): Vec2 => {
   const magnitude = length(value);
   return magnitude > 0.0001 ? mul(value, 1 / magnitude) : { ...fallback };

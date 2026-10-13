@@ -209,10 +209,17 @@ export class TinyFishSchools {
       TINY_FISH.visibleSchoolCount,
       this.ranges.length,
     );
+    const reactionRadius = TINY_FISH.flee.reactionRadius;
+    const reactionRadiusSq = reactionRadius * reactionRadius;
     for (const fish of this.fish) {
       if (fish.schoolIndex >= visibleSchools) continue;
-      const distance = length(sub(fish.position, point));
-      if (distance > TINY_FISH.flee.reactionRadius) continue;
+      const dx = fish.position.x - point.x;
+      if (Math.abs(dx) > reactionRadius) continue;
+      const dy = fish.position.y - point.y;
+      if (Math.abs(dy) > reactionRadius) continue;
+      const distSq = dx * dx + dy * dy;
+      if (distSq > reactionRadiusSq) continue;
+      const distance = Math.sqrt(distSq);
       fish.fleeDelay =
         distance / TINY_FISH.flee.propagationSpeed +
         this.random.range(0, TINY_FISH.flee.randomDelay);
@@ -248,6 +255,10 @@ export class TinyFishSchools {
       fromAngle(range.setting.heading),
     );
 
+    const neighbourRadius = TINY_FISH.neighbourRadius;
+    const neighbourRadiusSq = neighbourRadius * neighbourRadius;
+    const separationRadius = TINY_FISH.separationRadius;
+
     for (let index = range.start; index < range.start + range.count; index += 1) {
       const fish = this.fish[index];
       if (fish.fleeDelay >= 0) {
@@ -269,21 +280,22 @@ export class TinyFishSchools {
       let neighbours = 0;
       for (let other = range.start; other < range.start + range.count; other += 1) {
         if (other === index) continue;
-        const offset = sub(fish.position, this.fish[other].position);
-        const distance = length(offset);
-        if (distance <= 0.001 || distance >= TINY_FISH.neighbourRadius) continue;
+        const otherFish = this.fish[other];
+        const dx = fish.position.x - otherFish.position.x;
+        if (Math.abs(dx) >= neighbourRadius) continue;
+        const dy = fish.position.y - otherFish.position.y;
+        if (Math.abs(dy) >= neighbourRadius) continue;
+        const distSq = dx * dx + dy * dy;
+        if (distSq <= 0.0001 || distSq >= neighbourRadiusSq) continue;
+        const distance = Math.sqrt(distSq);
         neighbours += 1;
-        cohesion = add(cohesion, this.fish[other].position);
-        alignment = add(alignment, normalize(this.fish[other].velocity));
-        if (distance < TINY_FISH.separationRadius) {
-          separation = add(
-            separation,
-            mul(
-              normalize(offset),
-              (TINY_FISH.separationRadius - distance) /
-                TINY_FISH.separationRadius,
-            ),
-          );
+        cohesion = add(cohesion, otherFish.position);
+        alignment = add(alignment, normalize(otherFish.velocity));
+        if (distance < separationRadius) {
+          const invDist = 1 / distance;
+          const factor = (separationRadius - distance) / separationRadius;
+          separation.x += dx * invDist * factor;
+          separation.y += dy * invDist * factor;
         }
       }
 

@@ -161,6 +161,7 @@ export class PixelBoat {
   // Particle active arrays
   private readonly notes: MusicNoteParticle[] = [];
   private readonly pellets: FoodPelletParticle[] = [];
+  private readonly activeKoiBuffer: Koi[] = [];
   private lastNoteSpawnTime = 0;
 
   // Audio & Animation states
@@ -665,19 +666,32 @@ export class PixelBoat {
 
     const dt = 0.016;
 
-    // Extract active koi list for proximity feeding interaction
-    const activeKoi: Koi[] = [];
-    if (school) {
+    // Extract active koi list for proximity feeding interaction only when pellets exist
+    this.activeKoiBuffer.length = 0;
+    if (this.pellets.length > 0 && school) {
       if (Array.isArray(school)) {
-        activeKoi.push(...(school as Koi[]));
+        for (let idx = 0; idx < school.length; idx += 1) {
+          this.activeKoiBuffer.push(school[idx]);
+        }
+      } else if (Array.isArray((school as any).activeIndicesBuffer) && Array.isArray((school as any).fish)) {
+        const indices = (school as any).activeIndicesBuffer;
+        const fishList = (school as any).fish;
+        for (let idx = 0; idx < indices.length; idx += 1) {
+          const f = fishList[indices[idx]];
+          if (f) this.activeKoiBuffer.push(f);
+        }
       } else if (typeof (school as any).activeIndices === "function" && Array.isArray((school as any).fish)) {
         const indices = (school as School).activeIndices();
-        for (const idx of indices) {
-          const f = (school as School).fish[idx];
-          if (f) activeKoi.push(f);
+        const fishList = (school as any).fish;
+        for (let idx = 0; idx < indices.length; idx += 1) {
+          const f = fishList[indices[idx]];
+          if (f) this.activeKoiBuffer.push(f);
         }
       } else if (Array.isArray((school as any).fish)) {
-        activeKoi.push(...(school as any).fish);
+        const fishList = (school as any).fish;
+        for (let idx = 0; idx < fishList.length; idx += 1) {
+          this.activeKoiBuffer.push(fishList[idx]);
+        }
       }
     }
 
@@ -841,8 +855,10 @@ export class PixelBoat {
         if (!rip || rip.age > 2.8) continue;
         const dx = center.x - rip.center.x;
         const dy = center.y - rip.center.y;
-        const dist = Math.hypot(dx, dy);
         const waveRadius = 12.0 + rip.age * 88.0;
+        const maxBound = waveRadius + 20.0;
+        if (Math.abs(dx) >= maxBound || Math.abs(dy) >= maxBound) continue;
+        const dist = Math.sqrt(dx * dx + dy * dy);
         const distDiff = Math.abs(dist - waveRadius);
 
         if (distDiff < 20.0) {
@@ -963,21 +979,32 @@ export class PixelBoat {
 
         // Proximity feeding check: pellet is only consumed when a koi swims close to bite
         let eaten = false;
-        if (activeKoi.length > 0) {
-          for (const fish of activeKoi) {
+        if (this.activeKoiBuffer.length > 0) {
+          for (const fish of this.activeKoiBuffer) {
             // Fish swimming deep beneath surface (> 0.48) cannot bite surface food
             if (fish.depth > 0.48) continue;
 
             const mouthOffset = (fish.bodyWidth ?? 12.0) * 0.65;
             const mouthX = fish.position.x + Math.cos(fish.heading) * mouthOffset;
             const mouthY = fish.position.y + Math.sin(fish.heading) * mouthOffset;
-
-            const distMouth = Math.hypot(pellet.x - mouthX, pellet.y - mouthY);
-            const distHead = Math.hypot(pellet.x - fish.position.x, pellet.y - fish.position.y);
             const eatRadius = Math.max(8.0, (fish.bodyWidth ?? 12.0) * 1.15);
+            const maxRadius = eatRadius * 1.8;
+
+            const dxM = pellet.x - mouthX;
+            if (Math.abs(dxM) >= maxRadius) continue;
+            const dyM = pellet.y - mouthY;
+            if (Math.abs(dyM) >= maxRadius) continue;
+
+            const distMouthSq = dxM * dxM + dyM * dyM;
+            if (distMouthSq >= maxRadius * maxRadius) continue;
+            const distMouth = Math.sqrt(distMouthSq);
+
+            const dxH = pellet.x - fish.position.x;
+            const dyH = pellet.y - fish.position.y;
+            const distHead = Math.sqrt(dxH * dxH + dyH * dyH);
 
             // Subtle hydrodynamic suction into koi's mouth when very close
-            if (distMouth < eatRadius * 1.8 && distMouth > 0.1) {
+            if (distMouth < maxRadius && distMouth > 0.1) {
               const suctionSpeed = 16.0 * dt;
               pellet.x += ((mouthX - pellet.x) / distMouth) * suctionSpeed;
               pellet.y += ((mouthY - pellet.y) / distMouth) * suctionSpeed;
