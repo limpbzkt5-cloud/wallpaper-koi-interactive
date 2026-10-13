@@ -1,9 +1,20 @@
 {
+  "weather_mode": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Weather Mode",
+    "help": "Choose between selecting a manual preset, syncing lighting with local device time, or cycling automatically.",
+    "items": [
+      "Manual Preset",
+      "Sync with Device Time",
+      "Cycle Automatically"
+    ]
+  },
   "weather": {
     "type": "dropdown",
     "value": 0,
-    "text": "Weather Mode / Preset",
-    "help": "Atmospheric lighting, caustics, and color palette. Select a static preset, sync with device time, or cycle periodically.",
+    "text": "Weather Preset (When Manual)",
+    "help": "Active atmospheric lighting preset when Weather Mode is set to Manual.",
     "items": [
       "Sunny",
       "Sunset",
@@ -11,9 +22,7 @@
       "Rain",
       "Overcast",
       "Mist",
-      "Deep Clear",
-      "Sync with Device Time",
-      "Cycle Automatically"
+      "Deep Clear"
     ]
   },
   "rain": {
@@ -28,17 +37,11 @@
     "text": "Ambient River Audio",
     "help": "Gentle procedural river stream water audio loop."
   },
-  "clock_enabled": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Display Pond Clock",
-    "help": "Toggle the frosted glass pond clock."
-  },
   "clock_mode": {
     "type": "dropdown",
     "value": 0,
-    "text": "Clock Style",
-    "help": "Submerged: Sunken beneath swimming fish with water caustics. Floating: Surface HUD.",
+    "text": "Pond Clock Style",
+    "help": "Submerged: Sunken beneath swimming fish with water caustics. Floating: Surface HUD. Off: Disabled.",
     "items": [
       "Submerged (Underwater Refraction)",
       "Floating (Crisp Surface HUD)",
@@ -48,7 +51,7 @@
   "clock_format": {
     "type": "dropdown",
     "value": 0,
-    "text": "Clock Time Format",
+    "text": "Clock Format",
     "help": "Display in standard 24-hour time or 12-hour AM/PM format.",
     "items": [
       "24-Hour",
@@ -58,7 +61,7 @@
   "clock_seconds": {
     "type": "checkbox",
     "value": false,
-    "text": "Show Seconds",
+    "text": "Show Seconds Counter",
     "help": "Show animated seconds counter badge beside the main digits."
   },
   "clock_opacity": {
@@ -70,15 +73,6 @@
     "tick": 20,
     "text": "Clock Opacity (%)",
     "help": "Overall transparency of the frosted glass clock."
-  },
-  "clock_position": {
-    "type": "dropdown",
-    "value": 0,
-    "text": "Clock Position",
-    "help": "Clock is anchored at Center of Pond (or set Clock Style to Off) ensuring the boat orbits gracefully around it.",
-    "items": [
-      "Center of Pond (Locked)"
-    ]
   },
   "boat_scale": {
     "type": "slider",
@@ -97,7 +91,7 @@
     "max": 200,
     "step": 5,
     "tick": 20,
-    "text": "Boat Orbit Speed (%)",
+    "text": "Boat Cruising Speed (%)",
     "help": "Adjust the orbit cruising speed of the wooden boat around the clock (0% pauses movement)."
   },
   "boat_position": {
@@ -119,7 +113,7 @@
     "max": 48,
     "step": 1,
     "tick": 48,
-    "text": "Koi Count",
+    "text": "Koi Population",
     "help": "Total population of procedural koi fish swimming in the pond (1 to 48)."
   },
   "scatter": {
@@ -131,18 +125,6 @@
     "type": "button",
     "text": "Reset Pond",
     "help": "Reset koi population and reseed color genetics."
-  },
-  "framerate": {
-    "type": "dropdown",
-    "value": 0,
-    "text": "Frame Rate Cap",
-    "help": "Target frame rate limit. Lower values conserve GPU power and battery on laptops.",
-    "items": [
-      "Native (Uncapped)",
-      "60 FPS (Smooth)",
-      "45 FPS (Balanced)",
-      "30 FPS (Power Saver)"
-    ]
   },
   "visitorfrequency": {
     "type": "dropdown",
@@ -166,98 +148,29 @@
     "text": "Mutation Metamorphosis Rate (%)",
     "help": "Probability for eligible koi to evolve into mythical mutant variants."
   },
-  "cycle_interval": {
-    "type": "slider",
-    "value": 2,
-    "min": 1,
-    "max": 10,
-    "step": 1,
-    "tick": 10,
-    "text": "Fish Cycle Interval (Minutes)",
-    "help": "Time interval before fish cycle and re-roll metamorphic evolutions."
+  "mutation_filter": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Mutation Diversity Filter",
+    "help": "Control which mythical mutant koi varieties are permitted to spawn in the pond.",
+    "items": [
+      "All 14 Varieties (Full Diversity)",
+      "Luminescent & Celestial (Aurora, Umbra, Astraeus, Serene, Abyssal)",
+      "Elemental & Prismatic (Frozen, Electric, Nuclear, Midas, Rainbow)",
+      "Classic & Common (Crimson, Bunny, Ishmael)",
+      "Natural Pure Koi (No Mutations)"
+    ]
   },
-  "allow_abyssal": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Abyssal (Mythic Trench)",
-    "help": "Deep oceanic trench koi with vibrant blue-purple bioluminescence and glowing particles."
-  },
-  "allow_astraeus": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Astraeus (Mythic Star)",
-    "help": "Deep celestial cosmic indigo fish surrounded by starry halos."
-  },
-  "allow_serene": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Serene (Jade Shimmer)",
-    "help": "Bioluminescent emerald-jade koi with calming wake ripples."
-  },
-  "allow_umbra": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Umbra (Solar Eclipse)",
-    "help": "Void silhouette crowned by a 360-degree rotating solar eclipse corona."
-  },
-  "allow_aurora": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Aurora (Polar Glow)",
-    "help": "Borealis gradient hues shifting across scales."
-  },
-  "allow_midas": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Midas (Molten Gold)",
-    "help": "24k radiant liquid gold body scales."
-  },
-  "allow_frozen": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Frozen (Ice Glaze)",
-    "help": "Encased within a floating crystalline ice block that obstacles other fish."
-  },
-  "allow_electric": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Electric (Volt Spark)",
-    "help": "Crackling electric aura pulsing along spinal fins."
-  },
-  "allow_nuclear": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Nuclear (Toxic Radiance)",
-    "help": "Vibrant radioactive neon-lime glow."
-  },
-  "allow_mythical": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Mythical (Ethereal Pearl)",
-    "help": "Prismatic pearlescent sheen."
-  },
-  "allow_rainbow_cluster": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Rainbow Cluster",
-    "help": "Multi-spectral chromatic iridescence."
-  },
-  "allow_ishmael": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Ishmael (Monochrome)",
-    "help": "High-contrast albino white and obsidian ink."
-  },
-  "allow_crimson": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Crimson (Blood Sun)",
-    "help": "Deep scarlet cinnabar red scales."
-  },
-  "allow_bunny": {
-    "type": "checkbox",
-    "value": true,
-    "text": "Allow Bunny (Whimsical)",
-    "help": "Playful twin-tail markings."
+  "framerate": {
+    "type": "dropdown",
+    "value": 0,
+    "text": "Frame Rate Limit",
+    "help": "Target frame rate limit. Lower values conserve GPU power and battery on laptops.",
+    "items": [
+      "Native (Uncapped)",
+      "60 FPS (Smooth)",
+      "45 FPS (Balanced)",
+      "30 FPS (Power Saver)"
+    ]
   }
 }
