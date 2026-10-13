@@ -148,18 +148,89 @@
     "text": "Mutation Metamorphosis Rate (%)",
     "help": "Probability for eligible koi to evolve into mythical mutant variants."
   },
-  "mutation_filter": {
-    "type": "dropdown",
-    "value": 0,
-    "text": "Mutation Diversity Filter",
-    "help": "Control which mythical mutant koi varieties are permitted to spawn in the pond.",
-    "items": [
-      "All 14 Varieties (Full Diversity)",
-      "Luminescent & Celestial (Aurora, Umbra, Astraeus, Serene, Abyssal)",
-      "Elemental & Prismatic (Frozen, Electric, Nuclear, Midas, Rainbow)",
-      "Classic & Common (Crimson, Bunny, Ishmael)",
-      "Natural Pure Koi (No Mutations)"
-    ]
+  "allow_abyssal": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Abyssal (Mythic Trench)",
+    "help": "Deep oceanic trench koi with vibrant blue-purple bioluminescence and glowing particles."
+  },
+  "allow_astraeus": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Astraeus (Mythic Star)",
+    "help": "Deep celestial cosmic indigo fish surrounded by starry halos."
+  },
+  "allow_serene": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Serene (Jade Shimmer)",
+    "help": "Bioluminescent emerald-jade koi with calming wake ripples."
+  },
+  "allow_umbra": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Umbra (Solar Eclipse)",
+    "help": "Void silhouette crowned by a 360-degree rotating solar eclipse corona."
+  },
+  "allow_aurora": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Aurora (Polar Glow)",
+    "help": "Borealis gradient hues shifting across scales."
+  },
+  "allow_midas": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Midas (Molten Gold)",
+    "help": "24k radiant liquid gold body scales."
+  },
+  "allow_frozen": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Frozen (Ice Glaze)",
+    "help": "Encased within a floating crystalline ice block that obstacles other fish."
+  },
+  "allow_electric": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Electric (Volt Spark)",
+    "help": "Crackling electric aura pulsing along spinal fins."
+  },
+  "allow_nuclear": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Nuclear (Toxic Radiance)",
+    "help": "Vibrant radioactive neon-lime glow."
+  },
+  "allow_mythical": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Mythical (Ethereal Pearl)",
+    "help": "Prismatic pearlescent sheen."
+  },
+  "allow_rainbow_cluster": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Rainbow Cluster",
+    "help": "Multi-spectral chromatic iridescence."
+  },
+  "allow_ishmael": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Ishmael (Monochrome)",
+    "help": "High-contrast albino white and obsidian ink."
+  },
+  "allow_crimson": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Crimson (Blood Sun)",
+    "help": "Deep scarlet cinnabar red scales."
+  },
+  "allow_bunny": {
+    "type": "checkbox",
+    "value": false,
+    "text": "Allow Bunny (Whimsical)",
+    "help": "Playful twin-tail markings."
   },
   "framerate": {
     "type": "dropdown",

@@ -69,13 +69,9 @@
 
 ### 🧬 14 Metamorphic Koi Mutations & Streamlined Settings
 - **14 Mythical Varieties**: Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, and Bunny (with strict $O(1)$ immutable base dimensions preventing runaway size inflation).
-- **Curated Mutation Diversity Filter**:
-  - Replaces tedious checkbox lists with 5 curated ecological filters:
-    1. *All 14 Varieties (Full Diversity)* — Maximum genetic diversity with all mythical koi varieties.
-    2. *Luminescent & Celestial* — Ethereal glowing species (*Aurora*, *Umbra*, *Astraeus*, *Serene*, *Abyssal*).
-    3. *Elemental & Prismatic* — Dynamic elemental patterns (*Frozen*, *Electric*, *Nuclear*, *Midas*, *RainbowCluster*).
-    4. *Classic & Common* — Traditional pond markings (*Crimson*, *Bunny*, *Ishmael*).
-    5. *Natural Pure Koi Only* — Traditional Japanese Nishikigoi with zero magical mutations.
+- **Individual Mutation Checkboxes (Default Off for Custom Diversity)**:
+  - Every one of the 14 mythical mutations features its own dedicated checkbox toggle.
+  - All mutation toggles default to **Off**, allowing the pond to display serene, natural Nishikigoi out-of-the-box while giving you complete creative freedom to enable any combination of mythical variants (*Abyssal*, *Astraeus*, *Serene*, *Umbra*, *Aurora*, *Midas*, *Frozen*, *Electric*, *Nuclear*, *Mythical*, *Rainbow Cluster*, *Ishmael*, *Crimson*, *Bunny*).
 - **Dedicated Weather Control Modes**:
   - **Manual Preset**: Select any of the 7 hand-tuned atmospheric presets (*Sunny*, *Sunset*, *Moonlight*, *Rain*, *Overcast*, *Mist*, *Deep Clear*).
   - **Sync with Device Time**: Automatically maps local PC clock to pond illumination (gentle morning mist at dawn, radiant sunny/deep clear at midday, warm sunset at dusk, deep moonlight with glowing fireflies at night).
@@ -110,7 +106,7 @@ Settings are streamlined into **18 intuitive controls** across logical groups wi
 - **Audio**: Ambient music playback toggle and master volume slider.
 - **Clock HUD**: Display mode (*Submerged* / *Floating* / *Off*), 12h/24h format, seconds counter, opacity, and vertical position.
 - **Fauna & Wildlife**: Koi population (10–60), boat visibility toggle, wildlife toggle (frog, dragonflies, butterflies, fireflies).
-- **Mutation Diversity Filter**: Select allowed mutation tiers (All 14 Varieties, Luminescent & Celestial, Elemental & Prismatic, Classic & Common, Pure Natural Koi).
+- **Mutations (All Default Off)**: 14 individual checkboxes (*Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, Bunny*) allowing you to selectively enable only the mythical mutations you wish to see.
 - **Performance**: Frame rate limiter (Native, 60, 45, 30 FPS).
 
 ---

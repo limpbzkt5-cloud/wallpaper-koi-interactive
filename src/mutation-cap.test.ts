@@ -6,6 +6,7 @@ describe("Mutation Max Cap Invariant", () => {
   it("enforces maxPerMutation <= 2 across all mutations on reseed", () => {
     const school = new School();
     school.mutationChance = 1.0; // 100% mutation rate
+    for (const m of Object.values(FishMutation)) school.enabledMutations[m] = true;
 
     for (let trial = 0; trial < 30; trial += 1) {
       school.reseedMutations("sunny");
@@ -19,6 +20,7 @@ describe("Mutation Max Cap Invariant", () => {
 
   it("never exceeds maxPerMutation <= 2 when transformRandomFish is called repeatedly", () => {
     const school = new School();
+    school.enabledMutations[FishMutation.Frozen] = true;
     for (let i = 0; i < 10; i += 1) {
       school.transformRandomFish(FishMutation.Frozen);
       expect(school.countMutation(FishMutation.Frozen)).toBeLessThanOrEqual(school.maxPerMutation);
@@ -27,6 +29,7 @@ describe("Mutation Max Cap Invariant", () => {
 
   it("enforces maxPerMutation <= 2 when visitors spawn", () => {
     const school = new School();
+    school.enabledMutations[FishMutation.Frozen] = true;
     school.transformRandomFish(FishMutation.Frozen);
     school.transformRandomFish(FishMutation.Frozen);
     expect(school.countMutation(FishMutation.Frozen)).toBe(2);
@@ -53,6 +56,7 @@ describe("Mutation Max Cap Invariant", () => {
 
   it("successfully transforms fish to Abyssal mutation and verifies definition", () => {
     const school = new School();
+    school.enabledMutations[FishMutation.Abyssal] = true;
     for (let i = 0; i < school.count; i += 1) {
       school.fish[i].applyMutation(FishMutation.None);
     }

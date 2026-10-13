@@ -52,20 +52,20 @@ export class School {
 
   public enabledMutations: Record<FishMutation, boolean> = {
     [FishMutation.None]: true,
-    [FishMutation.Crimson]: true,
-    [FishMutation.Bunny]: true,
-    [FishMutation.Aurora]: true,
-    [FishMutation.Umbra]: true,
-    [FishMutation.Midas]: true,
-    [FishMutation.Electric]: true,
-    [FishMutation.Frozen]: true,
-    [FishMutation.Nuclear]: true,
-    [FishMutation.Mythical]: true,
-    [FishMutation.RainbowCluster]: true,
-    [FishMutation.Ishmael]: true,
-    [FishMutation.Serene]: true,
-    [FishMutation.Astraeus]: true,
-    [FishMutation.Abyssal]: true,
+    [FishMutation.Crimson]: false,
+    [FishMutation.Bunny]: false,
+    [FishMutation.Aurora]: false,
+    [FishMutation.Umbra]: false,
+    [FishMutation.Midas]: false,
+    [FishMutation.Electric]: false,
+    [FishMutation.Frozen]: false,
+    [FishMutation.Nuclear]: false,
+    [FishMutation.Mythical]: false,
+    [FishMutation.RainbowCluster]: false,
+    [FishMutation.Ishmael]: false,
+    [FishMutation.Serene]: false,
+    [FishMutation.Astraeus]: false,
+    [FishMutation.Abyssal]: false,
   };
   public visitorCountdown = 60;
   public cycleIntervalSeconds = 120;
@@ -86,6 +86,13 @@ export class School {
   private loadMutationPreferences(): void {
     try {
       if (typeof window !== "undefined" && window.localStorage) {
+        if (!window.localStorage.getItem("nagomi_mutations_default_off_v1")) {
+          for (const mut of Object.values(FishMutation)) {
+            if (mut === FishMutation.None) continue;
+            window.localStorage.removeItem(`nagomi_allow_${mut}`);
+          }
+          window.localStorage.setItem("nagomi_mutations_default_off_v1", "true");
+        }
         for (const mut of Object.values(FishMutation)) {
           if (mut === FishMutation.None) continue;
           const val = window.localStorage.getItem(`nagomi_allow_${mut}`);

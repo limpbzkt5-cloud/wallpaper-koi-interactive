@@ -177,19 +177,103 @@
         "type": "slider",
         "value": 70
       },
-      "mutation_filter": {
+      "allow_crimson": {
         "condition": "",
-        "options": [
-          { "label": "All 14 Varieties (Full Diversity)", "value": 0 },
-          { "label": "Luminescent & Celestial (Aurora, Umbra, Astraeus, Serene, Abyssal)", "value": 1 },
-          { "label": "Elemental & Prismatic (Frozen, Electric, Nuclear, Midas, Rainbow)", "value": 2 },
-          { "label": "Classic & Common (Crimson, Bunny, Ishmael)", "value": 3 },
-          { "label": "Natural Pure Koi (No Mutations)", "value": 4 }
-        ],
         "order": 17,
-        "text": "Mutation Diversity Filter",
-        "type": "combo",
-        "value": 0
+        "text": "Allow Crimson Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_bunny": {
+        "condition": "",
+        "order": 18,
+        "text": "Allow Bunny Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_aurora": {
+        "condition": "",
+        "order": 19,
+        "text": "Allow Aurora Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_umbra": {
+        "condition": "",
+        "order": 20,
+        "text": "Allow Umbra Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_midas": {
+        "condition": "",
+        "order": 21,
+        "text": "Allow Midas Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_electric": {
+        "condition": "",
+        "order": 22,
+        "text": "Allow Electric Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_frozen": {
+        "condition": "",
+        "order": 23,
+        "text": "Allow Frozen Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_nuclear": {
+        "condition": "",
+        "order": 24,
+        "text": "Allow Nuclear Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_mythical": {
+        "condition": "",
+        "order": 25,
+        "text": "Allow Mythical Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_rainbow_cluster": {
+        "condition": "",
+        "order": 26,
+        "text": "Allow Rainbow Cluster Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_ishmael": {
+        "condition": "",
+        "order": 27,
+        "text": "Allow Ishmael Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_serene": {
+        "condition": "",
+        "order": 28,
+        "text": "Allow Serene Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_astraeus": {
+        "condition": "",
+        "order": 29,
+        "text": "Allow Astraeus Mutation",
+        "type": "bool",
+        "value": false
+      },
+      "allow_abyssal": {
+        "condition": "",
+        "order": 30,
+        "text": "Allow Abyssal Mutation",
+        "type": "bool",
+        "value": false
       },
       "framerate": {
         "condition": "",
@@ -199,7 +283,7 @@
           { "label": "45 FPS (Balanced)", "value": "45" },
           { "label": "30 FPS (Power Saver)", "value": "30" }
         ],
-        "order": 18,
+        "order": 31,
         "text": "Frame Rate Limit",
         "type": "combo",
         "value": "native"

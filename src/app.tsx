@@ -589,6 +589,7 @@ export function App() {
         for (const mut of Object.values(FishMutation)) {
           if (mut === mutKey) {
             school.setMutationEnabled(mut, toBool(val));
+            school.reseedMutations(settings.meta().weather);
             break;
           }
         }
