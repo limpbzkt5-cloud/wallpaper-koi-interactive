@@ -8,7 +8,7 @@
 
 [![Three.js](https://img.shields.io/badge/Three.js-r186-blue.svg)](https://threejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-107%2F107%20Passing-brightgreen.svg)]()
+[![Vitest](https://img.shields.io/badge/Vitest-108%2F108%20Passing-brightgreen.svg)]()
 [![Wallpaper Engine](https://img.shields.io/badge/Wallpaper%20Engine-Compatible-orange.svg)]()
 [![Lively Wallpaper](https://img.shields.io/badge/Lively%20Wallpaper-Compatible-cyan.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -264,7 +264,7 @@ npm install
 # Start local development server with Vite HMR
 npm run dev
 
-# Run full Vitest test suite (107 tests)
+# Run full Vitest test suite (108 tests)
 npm run test
 
 # Compile TypeScript and build production bundle
