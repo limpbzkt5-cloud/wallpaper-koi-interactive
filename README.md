@@ -8,7 +8,7 @@
 
 [![Three.js](https://img.shields.io/badge/Three.js-r186-blue.svg)](https://threejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-108%2F108%20Passing-brightgreen.svg)]()
+[![Vitest](https://img.shields.io/badge/Vitest-110%2F110%20Passing-brightgreen.svg)]()
 [![Wallpaper Engine](https://img.shields.io/badge/Wallpaper%20Engine-Compatible-orange.svg)]()
 [![Lively Wallpaper](https://img.shields.io/badge/Lively%20Wallpaper-Compatible-cyan.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
@@ -67,9 +67,12 @@
   - `Off`: Completely detaches the clock mesh with **zero draw calls**.
 - **Tick Micro-Ripples**: Emits subtle radial Gaussian wave pulses on every second transition.
 
-### 🧬 14 Metamorphic Koi Mutations & Diurnal Weather
-- **Mythical Variants**: Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, and Bunny.
-- **7 Diurnal Weather Presets**: Sunny, Sunset, Moonlight, Rain, Overcast, Mist, and Deep Clear.
+### 🧬 14 Metamorphic Koi Mutations & Diurnal Weather Modes
+- **Mythical Variants**: Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, and Bunny (with strict $O(1)$ immutable base dimensions preventing runaway size inflation).
+- **Comprehensive Weather Modes**:
+  - **Sync with Device Time**: Dynamically maps your PC's local clock to atmospheric pond illumination (Mist at dawn, Sunny/Deep Clear at midday, Sunset at dusk, Moonlight with nocturnal fireflies at night).
+  - **Cycle Automatically**: Smoothly rotates through all weather presets on a periodic 3-minute interval.
+  - **Static Presets**: Sunny, Sunset, Moonlight, Rain, Overcast, Mist, and Deep Clear.
 
 ### ⚡ Performance & Adaptive Screen Aspect Ratio
 - **Full Viewport Display**: Automatically adapts to any monitor ratio (16:9, 16:10, 21:9 ultrawide, 3:2, 4:3) with 100% full-screen coverage and zero letterbox/pillarbox black bars.

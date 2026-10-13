@@ -2,8 +2,8 @@
   "weather": {
     "type": "dropdown",
     "value": 0,
-    "text": "Weather Preset",
-    "help": "Atmospheric lighting, caustics, and color palette (Sunny, Sunset, Moonlight, Rain, Overcast, Mist, Deep Clear).",
+    "text": "Weather Mode / Preset",
+    "help": "Atmospheric lighting, caustics, and color palette. Select a static preset, sync with device time, or cycle periodically.",
     "items": [
       "Sunny",
       "Sunset",
@@ -11,7 +11,9 @@
       "Rain",
       "Overcast",
       "Mist",
-      "Deep Clear"
+      "Deep Clear",
+      "Sync with Device Time",
+      "Cycle Automatically"
     ]
   },
   "rain": {

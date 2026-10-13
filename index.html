@@ -44,10 +44,18 @@
             window._pendingLivelyProperties.push({ name: name, val: val });
           }
         };
+
+        window.livelyWallpaperPlaybackChanged = function (data) {
+          if (typeof window._onLivelyPlaybackChanged === "function") {
+            window._onLivelyPlaybackChanged(data);
+          } else {
+            window._pendingLivelyPlaybackChanged = data;
+          }
+        };
       })();
     </script>
     <title>Interactive Koi Pond</title>
-    <script type="module" crossorigin src="./assets/index-C8De7bml.js"></script>
+    <script type="module" crossorigin src="./assets/index-D9_9XpeN.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-Mx4eY_kX.css">
   </head>
   <body>
