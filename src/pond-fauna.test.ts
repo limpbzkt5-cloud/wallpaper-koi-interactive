@@ -227,4 +227,60 @@ describe("PondFaunaPass", () => {
 
     fauna.dispose();
   });
+
+  it("renders frog beneath lily pads when swimming and steers around intermediate lily pads", () => {
+    const fauna = new PondFaunaPass();
+    const frogMesh = (fauna.group.children as any[]).find((c) => c.renderOrder === 18);
+    expect(frogMesh).toBeDefined();
+    expect(frogMesh.renderOrder).toBe(18);
+
+    // Mock LotusLeavesPass with three leaves: start (40, 40), intermediate (200, 130), dest (380, 220)
+    const mockLeaves = {
+      getLeafCount: () => 3,
+      getLeafState: (idx: number) => {
+        if (idx === 0) return { center: { x: 40, y: 40 }, radius: 20, pushVel: { x: 0, y: 0 }, displacement: 0, visible: true };
+        if (idx === 1) return { center: { x: 200, y: 130 }, radius: 24, pushVel: { x: 0, y: 0 }, displacement: 0, visible: true };
+        return { center: { x: 380, y: 220 }, radius: 22, pushVel: { x: 0, y: 0 }, displacement: 0, visible: true };
+      },
+    } as any;
+
+    fauna.frog.state = "sitting";
+    fauna.frog.leafIndex = 0;
+    fauna.frog.x = 40;
+    fauna.frog.y = 40;
+    fauna.frog.migrateTimer = 0.05;
+
+    // Trigger migration
+    fauna.update(0.1, 1.0, mockLeaves);
+    expect(fauna.frog.state).toBe("migrating_dive");
+    expect(frogMesh.renderOrder).toBe(18); // above pad in air
+
+    // Enter swimming
+    for (let t = 0; t < 0.45; t += 0.05) {
+      fauna.update(0.05, 1.0 + t, mockLeaves);
+    }
+    expect(fauna.frog.state).toBe("migrating_swim");
+    expect(frogMesh.renderOrder).toBe(0); // in water, beneath floating lily pads!
+
+    // Check intermediate leaf avoidance: distance to intermediate center (200, 130) stays clear
+    let minObsDistance = 999;
+    for (let t = 0; t < 15.0; t += 0.1) {
+      fauna.update(0.1, 2.0 + t, mockLeaves);
+      const obsD = Math.hypot(fauna.frog.x - 200, fauna.frog.y - 130);
+      minObsDistance = Math.min(minObsDistance, obsD);
+      if ((fauna.frog.state as string) === "migrating_land" || (fauna.frog.state as string) === "sitting") break;
+    }
+
+    // Must never swim right across intermediate leaf center (radius 24)
+    expect(minObsDistance).toBeGreaterThan(15.0);
+
+    // After landing, renderOrder returns to 18 (sitting on pad)
+    for (let t = 0; t < 1.0; t += 0.05) {
+      fauna.update(0.05, 18.0 + t, mockLeaves);
+    }
+    expect(fauna.frog.state as string).toBe("sitting");
+    expect(frogMesh.renderOrder).toBe(18);
+
+    fauna.dispose();
+  });
 });

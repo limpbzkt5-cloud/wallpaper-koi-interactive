@@ -154,8 +154,8 @@ export class PondFaunaPass {
     jumpProgress: 0,
     facingAngle: 0,
     swimDir: vec(1, 0),
-    idleJumpTimer: 22.0 + Math.random() * 16.0,
-    migrateTimer: 28.0 + Math.random() * 8.0,
+    idleJumpTimer: 35.0 + Math.random() * 25.0,
+    migrateTimer: 80.0 + Math.random() * 40.0,
     targetLeafIndex: -1,
     respawnTimer: 0,
     tongueTimer: 0,
@@ -358,6 +358,21 @@ export class PondFaunaPass {
     }
   }
 
+  /**
+   * Check if a lily pad is comfortably visible within the screen viewport.
+   * Prevents the frog from selecting or swimming towards cut-off edge leaves.
+   */
+  private isLeafComfortablyVisible(leaf: { center: { x: number; y: number }; radius: number }): boolean {
+    const marginX = 35.0;
+    const marginY = 28.0;
+    return (
+      leaf.center.x >= marginX &&
+      leaf.center.x <= CANVAS_WIDTH - marginX &&
+      leaf.center.y >= marginY &&
+      leaf.center.y <= CANVAS_HEIGHT - marginY
+    );
+  }
+
   private updateFrog(
     dt: number,
     _time: number,
@@ -389,24 +404,30 @@ export class PondFaunaPass {
       // If scared_dive or swimming, continue execution below to finish swimming offscreen and despawn
     }
 
-    // Check respawn if despawned (only during daytime)
+    // Check respawn if despawned (only during daytime onto comfortably visible lily pads)
     if (f.state === "despawned") {
       if (!isNight) {
         f.respawnTimer -= dt;
         if (f.respawnTimer <= 0 && lotusLeaves && lotusLeaves.getLeafCount() > 0) {
-          // Spawn on a random available lily pad
           const count = lotusLeaves.getLeafCount();
-          const randIdx = Math.floor(Math.random() * count);
-          const leaf = lotusLeaves.getLeafState(randIdx);
-          if (leaf) {
+          const visibleIndices: number[] = [];
+          for (let i = 0; i < count; i++) {
+            const leaf = lotusLeaves.getLeafState(i);
+            if (leaf && this.isLeafComfortablyVisible(leaf)) {
+              visibleIndices.push(i);
+            }
+          }
+          if (visibleIndices.length > 0) {
+            const randIdx = visibleIndices[Math.floor(Math.random() * visibleIndices.length)];
+            const leaf = lotusLeaves.getLeafState(randIdx)!;
             f.leafIndex = randIdx;
             f.x = leaf.center.x;
             f.y = leaf.center.y;
             f.z = 0;
             f.state = "sitting";
             f.stateTimer = 0;
-            f.idleJumpTimer = 22.0 + Math.random() * 16.0;
-            f.migrateTimer = 28.0 + Math.random() * 8.0;
+            f.idleJumpTimer = 35.0 + Math.random() * 25.0;
+            f.migrateTimer = 80.0 + Math.random() * 40.0;
             f.targetLeafIndex = -1;
             f.facingAngle = Math.random() * Math.PI * 2;
             this.redrawFrog();
@@ -466,11 +487,11 @@ export class PondFaunaPass {
         f.gulpTimer -= dt;
       }
 
-      // 1. Cross-Bundle Relocation (every ~30s, migrate to a lily pad bundle in another corner)
+      // 1. Cross-Bundle Relocation (much lower frequency ~80-120s, strictly to on-screen visible lily pads)
       f.migrateTimer -= dt;
       if (f.migrateTimer <= 0 && lotusLeaves && lotusLeaves.getLeafCount() > 1) {
-        f.migrateTimer = 28.0 + Math.random() * 8.0;
-        f.idleJumpTimer = 22.0 + Math.random() * 16.0;
+        f.migrateTimer = 80.0 + Math.random() * 40.0;
+        f.idleJumpTimer = 35.0 + Math.random() * 25.0;
 
         const count = lotusLeaves.getLeafCount();
         const distantLeaves: { idx: number; dist: number }[] = [];
@@ -478,6 +499,7 @@ export class PondFaunaPass {
           if (i === f.leafIndex) continue;
           const leaf = lotusLeaves.getLeafState(i);
           if (!leaf) continue;
+          if (!this.isLeafComfortablyVisible(leaf)) continue;
           const d = Math.hypot(leaf.center.x - f.x, leaf.center.y - f.y);
           if (d >= 130.0) {
             distantLeaves.push({ idx: i, dist: d });
@@ -494,6 +516,7 @@ export class PondFaunaPass {
             if (i === f.leafIndex) continue;
             const leaf = lotusLeaves.getLeafState(i);
             if (!leaf) continue;
+            if (!this.isLeafComfortablyVisible(leaf)) continue;
             const d = Math.hypot(leaf.center.x - f.x, leaf.center.y - f.y);
             if (d > maxD) {
               maxD = d;
@@ -503,6 +526,8 @@ export class PondFaunaPass {
         }
 
         if (chosenIdx >= 0) {
+          const currentLeaf = lotusLeaves.getLeafState(f.leafIndex);
+          const currentRadius = currentLeaf ? currentLeaf.radius : 20.0;
           const targetLeaf = lotusLeaves.getLeafState(chosenIdx)!;
           f.targetLeafIndex = chosenIdx;
           const toTarget = normalize(
@@ -512,7 +537,9 @@ export class PondFaunaPass {
           f.swimDir = toTarget;
           f.facingAngle = Math.atan2(toTarget.y, toTarget.x);
           f.jumpStart = vec(f.x, f.y);
-          f.jumpTarget = vec(f.x + toTarget.x * 16.0, f.y + toTarget.y * 16.0);
+          // Leap cleanly off the current lily pad into open water (radius + 8px clearance)
+          const diveClearance = currentRadius + 8.0;
+          f.jumpTarget = vec(f.x + toTarget.x * diveClearance, f.y + toTarget.y * diveClearance);
           f.state = "migrating_dive";
           f.stateTimer = 0;
           this.redrawFrog();
@@ -520,10 +547,10 @@ export class PondFaunaPass {
         }
       }
 
-      // 2. Idle Jump between adjacent lily pads within the same bundle (much lower frequency)
+      // 2. Idle Jump between adjacent lily pads within the same bundle (only to on-screen visible lily pads)
       f.idleJumpTimer -= dt;
       if (f.idleJumpTimer <= 0 && lotusLeaves && lotusLeaves.getLeafCount() > 1) {
-        f.idleJumpTimer = 22.0 + Math.random() * 16.0;
+        f.idleJumpTimer = 35.0 + Math.random() * 25.0;
         const count = lotusLeaves.getLeafCount();
         // Pick an adjacent visible lily pad in the same bundle (distance 15 to 85)
         let bestTargetIdx = -1;
@@ -531,7 +558,7 @@ export class PondFaunaPass {
         for (let i = 0; i < count; i++) {
           if (i === f.leafIndex) continue;
           const targetLeaf = lotusLeaves.getLeafState(i);
-          if (targetLeaf) {
+          if (targetLeaf && this.isLeafComfortablyVisible(targetLeaf)) {
             const d = Math.hypot(targetLeaf.center.x - f.x, targetLeaf.center.y - f.y);
             if (d < bestDist && d > 15.0) {
               bestDist = d;
@@ -655,14 +682,14 @@ export class PondFaunaPass {
         this.redrawFrog();
       }
     } else if (f.state === "migrating_dive") {
-      // Leap gently off the lily pad into the open water towards the distant bundle
+      // Leap gracefully off the current lily pad into open water
       f.stateTimer += dt;
-      const diveDuration = 0.35;
+      const diveDuration = 0.38;
       const p = clamp(f.stateTimer / diveDuration, 0, 1);
 
       f.x = f.jumpStart.x + (f.jumpTarget.x - f.jumpStart.x) * p;
       f.y = f.jumpStart.y + (f.jumpTarget.y - f.jumpStart.y) * p;
-      f.z = 4 * 8.0 * p * (1 - p);
+      f.z = 4 * 10.0 * p * (1 - p);
 
       if (p >= 1.0) {
         f.z = 0;
@@ -675,7 +702,7 @@ export class PondFaunaPass {
         }
       }
     } else if (f.state === "migrating_swim") {
-      // Calm, purposeful swim across the pond towards destination lily pad
+      // Purposeful breaststroke swim across the pond towards destination lily pad
       f.stateTimer += dt;
       f.swimStrokeTimer += dt;
 
@@ -689,12 +716,43 @@ export class PondFaunaPass {
         }
       }
 
-      const dx = targetPos.x - f.x;
-      const dy = targetPos.y - f.y;
-      const dist = Math.hypot(dx, dy);
+      // Approach point is at the water rim of the destination leaf
+      const toDestX = targetPos.x - f.x;
+      const toDestY = targetPos.y - f.y;
+      const distToCenter = Math.hypot(toDestX, toDestY);
 
-      if (dist > 1.0) {
-        f.swimDir = vec(dx / dist, dy / dist);
+      // Direct goal direction
+      let dirX = distToCenter > 1.0 ? toDestX / distToCenter : 0;
+      let dirY = distToCenter > 1.0 ? toDestY / distToCenter : 0;
+
+      // Obstacle avoidance: steer smoothly around any intermediate lily pads
+      if (lotusLeaves) {
+        const count = lotusLeaves.getLeafCount();
+        for (let i = 0; i < count; i++) {
+          if (i === f.targetLeafIndex) continue; // destination pad
+          // If just departed, ignore departure pad for first 0.6s
+          if (i === f.leafIndex && f.stateTimer < 0.6) continue;
+
+          const obsLeaf = lotusLeaves.getLeafState(i);
+          if (!obsLeaf) continue;
+
+          const ox = f.x - obsLeaf.center.x;
+          const oy = f.y - obsLeaf.center.y;
+          const odist = Math.hypot(ox, oy);
+          const safeRadius = obsLeaf.radius + 16.0;
+
+          if (odist < safeRadius && odist > 0.01) {
+            // Repulsive force pushing frog into clear open water channels
+            const pushFactor = (safeRadius - odist) / safeRadius;
+            dirX += (ox / odist) * pushFactor * 2.4;
+            dirY += (oy / odist) * pushFactor * 2.4;
+          }
+        }
+      }
+
+      const totalLen = Math.hypot(dirX, dirY);
+      if (totalLen > 0.01) {
+        f.swimDir = vec(dirX / totalLen, dirY / totalLen);
         f.facingAngle = Math.atan2(f.swimDir.y, f.swimDir.x);
       }
 
@@ -712,18 +770,18 @@ export class PondFaunaPass {
         ripples.trigger("mouth", vec(f.x, f.y));
       }
 
-      // Check arrival at destination lily pad edge
-      if (dist <= targetRadius * 0.75 + 8.0 || f.stateTimer > 20.0) {
+      // Check arrival at destination lily pad water edge: hop onto it!
+      if (distToCenter <= targetRadius + 6.0 || f.stateTimer > 25.0) {
         f.state = "migrating_land";
         f.stateTimer = 0;
-        f.jumpStart = vec(f.x, f.y);
-        f.jumpTarget = targetPos;
+        f.jumpStart = vec(f.x, f.y); // at water edge
+        f.jumpTarget = targetPos;    // onto leaf center!
         this.redrawFrog();
       }
     } else if (f.state === "migrating_land") {
-      // Hop gracefully out of the water onto the destination lily pad
+      // Gracefully hop out of the water onto the destination lily pad
       f.stateTimer += dt;
-      const landDuration = 0.40;
+      const landDuration = 0.42;
       const p = clamp(f.stateTimer / landDuration, 0, 1);
 
       f.x = f.jumpStart.x + (f.jumpTarget.x - f.jumpStart.x) * p;
@@ -735,8 +793,8 @@ export class PondFaunaPass {
         f.leafIndex = f.targetLeafIndex >= 0 ? f.targetLeafIndex : f.leafIndex;
         f.state = "sitting";
         f.stateTimer = 0;
-        f.idleJumpTimer = 22.0 + Math.random() * 16.0;
-        f.migrateTimer = 28.0 + Math.random() * 8.0;
+        f.idleJumpTimer = 35.0 + Math.random() * 25.0;
+        f.migrateTimer = 80.0 + Math.random() * 40.0;
         f.targetLeafIndex = -1;
         this.redrawFrog();
         if (ripples) {
@@ -1047,18 +1105,34 @@ export class PondFaunaPass {
     const f = this.frog;
     const isVisible = f.state !== "despawned";
     this.frogMesh.visible = isVisible;
-    this.frogShadowMesh.visible = isVisible;
 
-    if (!isVisible) return;
+    if (!isVisible) {
+      this.frogShadowMesh.visible = false;
+      return;
+    }
 
-    this.frogMesh.position.set(f.x, f.y - f.z, 0.10);
+    const isSwimming = f.state === "swimming" || f.state === "migrating_swim";
+    // When swimming in water, frog renders beneath floating lily leaves (renderOrder = 0)
+    // When sitting on or hopping in air above pad, frog renders above lily leaves (renderOrder = 18)
+    this.frogMesh.renderOrder = isSwimming ? 0 : 18;
+    this.frogShadowMesh.visible = isVisible && !isSwimming;
+
+    this.frogMesh.position.set(f.x, f.y - f.z, isSwimming ? -0.05 : 0.10);
     this.frogMesh.rotation.z = f.facingAngle - Math.PI * 0.5;
 
-    // Contact shadow with parallax lift based on height z
-    const shadowLift = 1.0 + f.z * 0.08;
-    this.frogShadowMesh.position.set(f.x + 1.8 * shadowLift, f.y + 2.8 * shadowLift, 0.04);
-    this.frogShadowMesh.rotation.z = f.facingAngle - Math.PI * 0.5;
-    this.frogShadowMesh.scale.setScalar(1.0 - Math.min(0.4, f.z * 0.02));
+    if (isSwimming) {
+      // Dynamic breaststroke body elongation pulse
+      const strokePhase = (f.swimStrokeTimer * 2.4) % 1.0;
+      const stretch = 1.0 + Math.sin(strokePhase * Math.PI) * 0.10;
+      this.frogMesh.scale.set(1.0 / Math.sqrt(stretch), stretch, 1.0);
+    } else {
+      this.frogMesh.scale.set(1.0, 1.0, 1.0);
+      // Contact shadow with parallax lift based on height z
+      const shadowLift = 1.0 + f.z * 0.08;
+      this.frogShadowMesh.position.set(f.x + 1.8 * shadowLift, f.y + 2.8 * shadowLift, 0.04);
+      this.frogShadowMesh.rotation.z = f.facingAngle - Math.PI * 0.5;
+      this.frogShadowMesh.scale.setScalar(1.0 - Math.min(0.4, f.z * 0.02));
+    }
   }
 
   /**
