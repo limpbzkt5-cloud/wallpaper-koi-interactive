@@ -10,15 +10,15 @@ import { useSetting } from "./settings/react";
 import { settings } from "./settings/store";
 import { definition, SETTINGS_GROUPS, SECTION_TITLES, SECTION_DESCRIPTIONS, type SectionId } from "./settings/definition";
 import type { AnyNode, SettingPath } from "./settings/schema";
-import type { WeatherPresetId } from "./weather";
+import type { WeatherPresetId, WeatherSelectionMode } from "./weather";
 
 interface ConfigEditorProps {
   query: string;
   onQueryChange: (query: string) => void;
-  weather: WeatherPresetId;
+  weather: WeatherPresetId | WeatherSelectionMode;
   rainEnabled: boolean;
   soundEnabled: boolean;
-  onWeatherChange: (id: WeatherPresetId) => void;
+  onWeatherChange: (id: WeatherPresetId | WeatherSelectionMode) => void;
   onRainChange: (enabled: boolean) => void;
   onSoundChange: (enabled: boolean) => void;
   onResetSection: (sectionIds: readonly SectionId[]) => void;

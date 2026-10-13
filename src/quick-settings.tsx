@@ -6,13 +6,17 @@ import { SettingsColorInput, SettingsSlider } from "./settings-controls";
 import { useSetting } from "./settings/react";
 import { settings } from "./settings/store";
 import type { SectionId } from "./settings/definition";
-import { WEATHER_PRESETS, type WeatherPresetId } from "./weather";
+import {
+  WEATHER_PRESETS,
+  type WeatherPresetId,
+  type WeatherSelectionMode,
+} from "./weather";
 
 interface QuickSettingsProps {
-  weather: WeatherPresetId;
+  weather: WeatherPresetId | WeatherSelectionMode;
   rainEnabled: boolean;
   soundEnabled: boolean;
-  onWeatherChange: (id: WeatherPresetId) => void;
+  onWeatherChange: (id: WeatherPresetId | WeatherSelectionMode) => void;
   onRainChange: (enabled: boolean) => void;
   onSoundChange: (enabled: boolean) => void;
   onResetSection: (sectionIds: readonly SectionId[]) => void;
@@ -253,11 +257,17 @@ export function QuickSettings({
             id="quick-weather"
             className="quick-setting__select"
             value={weather}
-            onChange={(event) => onWeatherChange(event.target.value as WeatherPresetId)}
+            onChange={(event) => onWeatherChange(event.target.value as WeatherSelectionMode)}
           >
-            {WEATHER_PRESETS.map((preset) => (
-              <option key={preset.id} value={preset.id}>{preset.label}</option>
-            ))}
+            <optgroup label="Dynamic Modes">
+              <option value="device_time">Sync with Device Time</option>
+              <option value="cycle">Cycle Automatically</option>
+            </optgroup>
+            <optgroup label="Static Presets">
+              {WEATHER_PRESETS.map((preset) => (
+                <option key={preset.id} value={preset.id}>{preset.label}</option>
+              ))}
+            </optgroup>
           </select>
         </div>
         <div className="quick-setting quick-setting--switch" data-base-ui-swipe-ignore>

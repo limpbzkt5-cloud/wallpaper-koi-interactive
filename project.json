@@ -47,10 +47,18 @@
           {
             "label": "Deep Clear",
             "value": "deep-clear"
+          },
+          {
+            "label": "Sync with Device Time",
+            "value": "device_time"
+          },
+          {
+            "label": "Cycle Automatically",
+            "value": "cycle"
           }
         ],
         "order": 2,
-        "text": "Weather Preset",
+        "text": "Weather Mode / Preset",
         "type": "combo",
         "value": "sunny"
       },

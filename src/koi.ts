@@ -52,15 +52,21 @@ export class Koi {
   public isDeparting = false;
   public departTarget = vec();
 
+  public baseCruiseSpeed = 20;
+  public baseMaximumSpeed = 34;
+  public baseBodyLength = 24;
+  public baseBodyWidth = 4;
+
   public applyMutation(mutation: FishMutation): void {
     this.mutation = mutation;
     const def = MUTATION_DEFINITIONS[mutation];
-    if (def && mutation !== FishMutation.None) {
-      this.cruiseSpeed *= def.speedScale;
-      this.maximumSpeed *= def.speedScale;
-      this.bodyLength *= def.sizeScale;
-      this.bodyWidth *= def.sizeScale;
-    }
+    const speedScale = def && mutation !== FishMutation.None ? def.speedScale : 1.0;
+    const sizeScale = def && mutation !== FishMutation.None ? def.sizeScale : 1.0;
+
+    this.cruiseSpeed = this.baseCruiseSpeed * speedScale;
+    this.maximumSpeed = this.baseMaximumSpeed * speedScale;
+    this.bodyLength = this.baseBodyLength * sizeScale;
+    this.bodyWidth = this.baseBodyWidth * sizeScale;
   }
 
   public reset(index: number, random: XorShift32): void {
@@ -78,6 +84,10 @@ export class Koi {
     const widthRange = tiny ? FISH.tinyWidthRatio : FISH.regularWidthRatio;
     this.bodyLength = random.range(lengthRange[0], lengthRange[1]);
     this.bodyWidth = this.bodyLength * random.range(widthRange[0], widthRange[1]);
+    this.baseBodyLength = this.bodyLength;
+    this.baseBodyWidth = this.bodyWidth;
+    this.baseCruiseSpeed = this.cruiseSpeed;
+    this.baseMaximumSpeed = this.maximumSpeed;
     this.phaseOffset = random.range(0, TAU);
     this.swimPhase = this.phaseOffset;
     this.wanderSeed = random.range(0, 100);

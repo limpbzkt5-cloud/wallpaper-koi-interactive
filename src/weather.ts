@@ -7,6 +7,8 @@ export type WeatherPresetId =
   | "moonlight"
   | "rain";
 
+export type WeatherSelectionMode = WeatherPresetId | "device_time" | "cycle";
+
 export type ColorTriplet = readonly [number, number, number];
 type Direction = readonly [number, number];
 
@@ -359,3 +361,54 @@ export function getWeatherPreset(id: WeatherPresetId): WeatherPreset {
     WEATHER_PRESETS.find((preset) => preset.id === id) ?? WEATHER_PRESETS[0]
   );
 }
+
+export const WEATHER_CYCLE_SEQUENCE: readonly WeatherPresetId[] = [
+  "sunny",
+  "deep-clear",
+  "mist",
+  "rain",
+  "overcast",
+  "sunset",
+  "moonlight",
+] as const;
+
+export function getWeatherForDeviceTime(date: Date = new Date()): WeatherPresetId {
+  const decimalHours =
+    date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+
+  // 05:00 to 08:30 - Dawn / Morning Mist
+  if (decimalHours >= 5.0 && decimalHours < 8.5) {
+    return "mist";
+  }
+  // 08:30 to 12:00 - Morning Sunny
+  if (decimalHours >= 8.5 && decimalHours < 12.0) {
+    return "sunny";
+  }
+  // 12:00 to 16:30 - Midday Deep Clear
+  if (decimalHours >= 12.0 && decimalHours < 16.5) {
+    return "deep-clear";
+  }
+  // 16:30 to 19:30 - Dusk Sunset / Golden Hour
+  if (decimalHours >= 16.5 && decimalHours < 19.5) {
+    return "sunset";
+  }
+  // 19:30 to 05:00 - Moonlight Night
+  return "moonlight";
+}
+
+export interface WeatherSelectionOption {
+  id: WeatherSelectionMode;
+  label: string;
+}
+
+export const WEATHER_SELECTION_OPTIONS: readonly WeatherSelectionOption[] = [
+  { id: "sunny", label: "Sunny" },
+  { id: "sunset", label: "Sunset" },
+  { id: "moonlight", label: "Moonlight" },
+  { id: "rain", label: "Rain" },
+  { id: "overcast", label: "Overcast" },
+  { id: "mist", label: "Mist" },
+  { id: "deep-clear", label: "Deep Clear" },
+  { id: "device_time", label: "Sync with Device Time" },
+  { id: "cycle", label: "Cycle Automatically" },
+] as const;

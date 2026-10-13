@@ -32,7 +32,10 @@ import { School } from "./school";
 import { FishMutation } from "./mutations";
 import {
   getWeatherPreset,
+  getWeatherForDeviceTime,
+  WEATHER_CYCLE_SEQUENCE,
   type WeatherPresetId,
+  type WeatherSelectionMode,
 } from "./weather";
 import type { ClockMode } from "./pond-clock";
 
@@ -327,6 +330,31 @@ export function App() {
     let lastTransformBunnyVal: boolean | null = null;
     let lastTransformCrimsonVal: boolean | null = null;
     let lastTransformAbyssalVal: boolean | null = null;
+    let weatherMode: WeatherSelectionMode = "sunny";
+    let lastDevicePreset: WeatherPresetId | null = null;
+    let deviceCheckTimer = 0;
+    let cycleTimer = 0;
+    let currentCycleIdx = 0;
+
+    const applyWeatherSelection = (mode: WeatherSelectionMode): void => {
+      weatherMode = mode;
+      if (mode === "device_time") {
+        const target = getWeatherForDeviceTime();
+        lastDevicePreset = target;
+        settings.setWeather(target);
+        renderer.setWeatherPreset(target);
+      } else if (mode === "cycle") {
+        currentCycleIdx = 0;
+        cycleTimer = 0;
+        const target = WEATHER_CYCLE_SEQUENCE[0];
+        settings.setWeather(target);
+        renderer.setWeatherPreset(target);
+      } else {
+        settings.setWeather(mode);
+        renderer.setWeatherPreset(mode);
+      }
+    };
+
     const frameLimiter = createFrameLimiter();
 
     const animate = (now: number): void => {
@@ -341,6 +369,31 @@ export function App() {
       previousTime = now;
       while (accumulator >= FIXED_STEP) {
         simulationTime += FIXED_STEP;
+
+        // Dynamic weather updates (Device Time Sync & Periodic Cycle)
+        if (weatherMode === "device_time") {
+          deviceCheckTimer += FIXED_STEP;
+          if (deviceCheckTimer >= 10) {
+            deviceCheckTimer = 0;
+            const target = getWeatherForDeviceTime();
+            if (target !== lastDevicePreset) {
+              lastDevicePreset = target;
+              settings.setWeather(target);
+              renderer.setWeatherPreset(target);
+            }
+          }
+        } else if (weatherMode === "cycle") {
+          cycleTimer += FIXED_STEP;
+          const CYCLE_INTERVAL = 180; // 3 minutes per preset
+          if (cycleTimer >= CYCLE_INTERVAL) {
+            cycleTimer = 0;
+            currentCycleIdx = (currentCycleIdx + 1) % WEATHER_CYCLE_SEQUENCE.length;
+            const target = WEATHER_CYCLE_SEQUENCE[currentCycleIdx];
+            settings.setWeather(target);
+            renderer.setWeatherPreset(target);
+          }
+        }
+
         school.update(FIXED_STEP, simulationTime, settings.meta().weather);
         accumulator -= FIXED_STEP;
       }
@@ -423,7 +476,7 @@ export function App() {
         settings.set(["koi", "initialCount"], count);
         school.setCount(count);
       } else if (name === "weather") {
-        const presets: WeatherPresetId[] = [
+        const modes: WeatherSelectionMode[] = [
           "sunny",
           "sunset",
           "moonlight",
@@ -431,23 +484,30 @@ export function App() {
           "overcast",
           "mist",
           "deep-clear",
+          "device_time",
+          "cycle",
         ];
-        let id: WeatherPresetId = "sunny";
-        if (typeof val === "number" && val >= 0 && val < presets.length) {
-          id = presets[val];
+        let selected: WeatherSelectionMode = "sunny";
+        if (typeof val === "number" && val >= 0 && val < modes.length) {
+          selected = modes[val];
         } else if (typeof val === "string") {
-          const lower = val.toLowerCase();
-          const found = presets.find((p) => lower.includes(p));
-          if (found) id = found;
+          const lower = val.toLowerCase().trim();
+          if (lower.includes("device") || lower.includes("time") || lower === "device_time") {
+            selected = "device_time";
+          } else if (lower.includes("cycle")) {
+            selected = "cycle";
+          } else {
+            const found = modes.find((m) => lower.includes(m));
+            if (found) selected = found;
+          }
         }
-        settings.setWeather(id);
-        renderer.setWeatherPreset(id);
+        applyWeatherSelection(selected);
       } else if (name === "rain") {
-        const enabled = Boolean(val);
+        const enabled = toBool(val);
         settings.setRain(enabled);
         school.setRainIntensity(enabled ? 1 : 0);
       } else if (name === "sound") {
-        const enabled = Boolean(val);
+        const enabled = toBool(val);
         setAmbientSoundEnabled(enabled);
         renderer.pixelBoat.setMusicPlaying(enabled);
       } else if (name === "framerate") {
@@ -544,17 +604,24 @@ export function App() {
         school.setCount(count);
       }
       if (properties.weather !== undefined && properties.weather.value !== undefined) {
-        const id = String(properties.weather.value) as WeatherPresetId;
-        settings.setWeather(id);
-        renderer.setWeatherPreset(id);
+        const raw = String(properties.weather.value).toLowerCase().trim();
+        let selected: WeatherSelectionMode = "sunny";
+        if (raw === "device_time" || raw.includes("device")) {
+          selected = "device_time";
+        } else if (raw === "cycle") {
+          selected = "cycle";
+        } else {
+          selected = raw as WeatherPresetId;
+        }
+        applyWeatherSelection(selected);
       }
       if (properties.rain !== undefined && properties.rain.value !== undefined) {
-        const enabled = Boolean(properties.rain.value);
+        const enabled = toBool(properties.rain.value);
         settings.setRain(enabled);
         school.setRainIntensity(enabled ? 1 : 0);
       }
       if (properties.sound !== undefined && properties.sound.value !== undefined) {
-        const enabled = Boolean(properties.sound.value);
+        const enabled = toBool(properties.sound.value);
         setAmbientSoundEnabled(enabled);
         renderer.pixelBoat.setMusicPlaying(enabled);
       }
@@ -731,11 +798,25 @@ export function App() {
       window._pendingLivelyProperties = [];
     }
 
+    // Connect Lively playback changed listener (handles background pause/resume cleanly)
+    const handleLivelyPlayback = (data: any): void => {
+      const isPaused = Boolean(data && (data.isPaused ?? data.paused));
+      setSuspended(isPaused);
+    };
+    (window as any)._onLivelyPlaybackChanged = handleLivelyPlayback;
+    (window as any).livelyWallpaperPlaybackChanged = handleLivelyPlayback;
+    if ((window as any)._pendingLivelyPlaybackChanged !== undefined) {
+      handleLivelyPlayback((window as any)._pendingLivelyPlaybackChanged);
+      delete (window as any)._pendingLivelyPlaybackChanged;
+    }
+
     // Register Wallpaper Engine Audio & Media listeners for automatic sync
     const win = window as any;
     if (typeof win !== "undefined") {
-      // 1. Audio visualizer frequency listener
+      // 1. Audio visualizer frequency listener with Schmitt trigger hysteresis
       if (typeof win.wallpaperRegisterAudioListener === "function") {
+        let lastAudioPlayState = false;
+        let silenceFrames = 0;
         win.wallpaperRegisterAudioListener((audioArray: number[]) => {
           if (!audioArray || audioArray.length === 0) return;
           let sum = 0;
@@ -743,8 +824,22 @@ export function App() {
             sum += audioArray[i];
           }
           const avg = sum / audioArray.length;
-          const hasExternalAudio = avg > 0.005;
-          renderer.pixelBoat.setSystemAudioPlaying(hasExternalAudio, avg);
+          // Schmitt trigger / Hysteresis filtering to prevent random oscillation
+          if (avg > 0.012) {
+            silenceFrames = 0;
+            if (!lastAudioPlayState) {
+              lastAudioPlayState = true;
+              renderer.pixelBoat.setSystemAudioPlaying(true, avg);
+            } else {
+              renderer.pixelBoat.setSystemAudioPlaying(true, avg);
+            }
+          } else if (avg < 0.004) {
+            silenceFrames++;
+            if (silenceFrames >= 6 && lastAudioPlayState) {
+              lastAudioPlayState = false;
+              renderer.pixelBoat.setSystemAudioPlaying(false, 0);
+            }
+          }
         });
       }
 

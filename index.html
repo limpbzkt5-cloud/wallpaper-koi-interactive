@@ -44,6 +44,14 @@
             window._pendingLivelyProperties.push({ name: name, val: val });
           }
         };
+
+        window.livelyWallpaperPlaybackChanged = function (data) {
+          if (typeof window._onLivelyPlaybackChanged === "function") {
+            window._onLivelyPlaybackChanged(data);
+          } else {
+            window._pendingLivelyPlaybackChanged = data;
+          }
+        };
       })();
     </script>
     <title>Interactive Koi Pond</title>

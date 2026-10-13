@@ -544,8 +544,9 @@ export class School {
       );
       const newWidth = midpoint(isTiny ? FISH.tinyWidthRatio : FISH.regularWidthRatio);
       const lengthRatio = newLength / Math.max(oldLength, 0.001);
-      fish.bodyLength *= lengthRatio;
-      fish.bodyWidth *= lengthRatio * newWidth / Math.max(oldWidth, 0.001);
+      fish.baseBodyLength *= lengthRatio;
+      fish.baseBodyWidth *= (lengthRatio * newWidth) / Math.max(oldWidth, 0.001);
+      fish.applyMutation(fish.mutation);
     }
   }
 

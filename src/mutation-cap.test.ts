@@ -63,4 +63,60 @@ describe("Mutation Max Cap Invariant", () => {
     expect(abyssalFish).toBeDefined();
     expect(abyssalFish?.mutation).toBe(FishMutation.Abyssal);
   });
+
+  it("never suffers from runaway fish growth upon repeated mutations", () => {
+    const school = new School();
+    const fish = school.fish[0];
+    const initialLength = fish.baseBodyLength;
+    const initialWidth = fish.baseBodyWidth;
+
+    // Apply mutations 50 times in a row
+    for (let i = 0; i < 50; i++) {
+      fish.applyMutation(FishMutation.Frozen);
+      fish.applyMutation(FishMutation.Abyssal);
+      fish.applyMutation(FishMutation.Crimson);
+      fish.applyMutation(FishMutation.None);
+    }
+
+    // When back to None, size MUST exactly equal base size
+    expect(fish.bodyLength).toBeCloseTo(initialLength, 4);
+    expect(fish.bodyWidth).toBeCloseTo(initialWidth, 4);
+
+    // When applied a specific mutation, size must be base * scale, NOT exponentially compounded
+    fish.applyMutation(FishMutation.Frozen);
+    expect(fish.bodyLength).toBeLessThan(initialLength * 1.5);
+    expect(fish.bodyWidth).toBeLessThan(initialWidth * 1.5);
+  });
+});
+
+describe("Weather Mode Selection & Cycling", () => {
+  it("maps device hours to appropriate diurnal weather presets", async () => {
+    const { getWeatherForDeviceTime, WEATHER_CYCLE_SEQUENCE } = await import("./weather");
+
+    // 06:00 -> mist
+    const dMorning = new Date(2026, 0, 1, 6, 0, 0);
+    expect(getWeatherForDeviceTime(dMorning)).toBe("mist");
+
+    // 10:00 -> sunny
+    const dDay = new Date(2026, 0, 1, 10, 0, 0);
+    expect(getWeatherForDeviceTime(dDay)).toBe("sunny");
+
+    // 14:00 -> deep-clear
+    const dAfternoon = new Date(2026, 0, 1, 14, 0, 0);
+    expect(getWeatherForDeviceTime(dAfternoon)).toBe("deep-clear");
+
+    // 18:00 -> sunset
+    const dSunset = new Date(2026, 0, 1, 18, 0, 0);
+    expect(getWeatherForDeviceTime(dSunset)).toBe("sunset");
+
+    // 23:00 & 02:00 -> moonlight
+    const dNight1 = new Date(2026, 0, 1, 23, 0, 0);
+    const dNight2 = new Date(2026, 0, 1, 2, 0, 0);
+    expect(getWeatherForDeviceTime(dNight1)).toBe("moonlight");
+    expect(getWeatherForDeviceTime(dNight2)).toBe("moonlight");
+
+    expect(WEATHER_CYCLE_SEQUENCE.length).toBe(7);
+    expect(WEATHER_CYCLE_SEQUENCE).toContain("sunny");
+    expect(WEATHER_CYCLE_SEQUENCE).toContain("moonlight");
+  });
 });
