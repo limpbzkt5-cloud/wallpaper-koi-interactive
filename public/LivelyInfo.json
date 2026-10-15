@@ -8,6 +8,6 @@
   "License": "MIT",
   "Contact": "",
   "Type": 1,
-  "Arguments": "--audio --pause-event true",
+  "Arguments": "--autoplay-policy=no-user-gesture-required",
   "FileName": "index.html"
 }

@@ -86,44 +86,63 @@
 
 ## 🚀 Installation Guide
 
+Nagomi Koi Pond is designed to run seamlessly across **Lively Wallpaper**, **Wallpaper Engine**, and **Web Browsers**. Choose your platform below:
+
+---
+
 ### Option 1: Lively Wallpaper (Free & Open Source)
 
-#### Step 1: Install Wallpaper
-- **Method A (Drag & Drop — Recommended)**:
-  1. Download [`NagomiKoi.livelypack`](./NagomiKoi.livelypack) from the repository root.
-  2. Open **Lively Wallpaper**.
-  3. Drag and drop `NagomiKoi.livelypack` into the Lively window (or click **Add Wallpaper (+)** ➔ **Browse** ➔ select `NagomiKoi.livelypack`).
-  4. Click **OK** to set it as your active desktop wallpaper.
-- **Method B (Local Sync Script)**:
-  - Run `npm run sync:lively` or double-click [`Sync-Lively-Wallpaper.bat`](./Sync-Lively-Wallpaper.bat).
+Lively Wallpaper supports importing the interactive pond either directly via **`index.html`** (or dragging the folder) or via the bundled **`.livelypack`**. Both methods grant you full access to all 18 interactive controls.
 
-#### Step 2: Customizing Settings in Lively & Wallpaper Engine
-Settings are streamlined into **18 intuitive controls** across logical groups with real-time preview and tooltips:
-- **Weather & Atmosphere**:
-  - `Weather Mode`: Choose *Manual Preset*, *Sync with Device Time*, or *Cycle Automatically*.
-  - `Weather Preset`: Select specific mood (*Sunny*, *Sunset*, *Moonlight*, *Rain*, *Overcast*, *Mist*, *Deep Clear*) when in Manual mode.
-- **Pond & Environment**: Rain ripple density, feeding frequency, boat cruising speed.
-- **Audio**: Ambient music playback toggle and master volume slider.
-- **Clock HUD**: Display mode (*Submerged* / *Floating* / *Off*), 12h/24h format, seconds counter, opacity, and vertical position.
-- **Fauna & Wildlife**: Koi population (10–60), boat visibility toggle, wildlife toggle (frog, dragonflies, butterflies, fireflies).
-- **Mutations (All Default Off)**: 14 individual checkboxes (*Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, Bunny*) allowing you to selectively enable only the mythical mutations you wish to see.
-- **Performance**: Frame rate limiter (Native, 60, 45, 30 FPS).
+#### Method A: Direct `index.html` Import (Most Popular & Recommended for ZIP Downloads)
+If you downloaded the repository as a ZIP from GitHub (**Code ➔ Download ZIP**) or cloned the repo:
+1. **Extract the ZIP** to a permanent folder on your PC (e.g. `Documents\NagomiKoi` or your preferred wallpaper directory).
+2. Open **Lively Wallpaper**.
+3. Click the **Add Wallpaper (+)** button in the upper-right corner.
+4. Under the **"Choose a file"** section, click **Browse** (or simply drag the extracted folder / `index.html` file directly into the Lively window).
+5. Select the **`index.html`** file inside the folder:
+   - *If using the default release (`main` branch)*: Select `index.html` in the root directory.
+   - *If building from source (`source` branch)*: Run `npm run build` first, then select `dist/index.html`.
+6. Lively will automatically read `LivelyInfo.json`, showing the wallpaper title, author, and preview thumbnail. Click **OK**.
+7. **Customizing Settings**: Right-click the Nagomi Koi wallpaper tile in Lively ➔ select **Customise Wallpaper** (gear icon) to adjust lighting presets, fish counts, clock styles, and individual koi mutations.
+
+#### Method B: Drag & Drop `.livelypack` (1-Click Install)
+1. Download [`NagomiKoi.livelypack`](./NagomiKoi.livelypack) from the repository root.
+2. Open **Lively Wallpaper**.
+3. Drag and drop `NagomiKoi.livelypack` into the Lively window.
+4. Click **OK** to apply as your active desktop wallpaper.
+
+#### Method C: Developer / Automatic 1-Click Sync
+If you are developing locally with Node.js installed:
+- Double-click [`Sync-Lively-Wallpaper.bat`](./Sync-Lively-Wallpaper.bat) or run:
+  ```bash
+  npm run sync:lively
+  ```
+- The cross-machine script compiles the latest code, links it directly into your local Lively Wallpaper library directory, and updates `NagomiKoi.livelypack`.
 
 ---
 
 ### Option 2: Wallpaper Engine (Steam)
 
-#### 1-Click Automatic Install:
-1. Double-click [`Sync-Wallpaper-Engine.bat`](./Sync-Wallpaper-Engine.bat) in the repository root.
-2. The script compiles the project and links it directly into your Wallpaper Engine projects directory:
-   `C:\Program Files (x86)\Steam\steamapps\common\wallpaper_engine\projects\myprojects\nagomi_koi`
+#### Method A: 1-Click Automatic Sync (Recommended)
+1. Double-click [`Sync-Wallpaper-Engine.bat`](./Sync-Wallpaper-Engine.bat) or run:
+   ```bash
+   npm run sync:we
+   ```
+2. The dynamic sync script automatically locates your Steam and Wallpaper Engine installation (supporting drives `C:`, `D:`, `E:`), copies the production build into `projects/myprojects/nagomi_koi`, and signals Wallpaper Engine to reload.
 3. Open Wallpaper Engine and select **Interactive Koi Pond**.
 
-#### Manual Install:
-1. Run `npm install && npm run build`.
-2. Copy the contents of `dist/` into:
-   `C:\Program Files (x86)\Steam\steamapps\common\wallpaper_engine\projects\myprojects\nagomi_koi\`
-3. Open Wallpaper Engine.
+#### Method B: Manual File Copy
+1. Run `npm run build` (or use the pre-built files from the `main` branch).
+2. Copy the contents of the `dist/` folder (including `index.html`, `project.json`, `assets/`, `audio/`) into:
+   ```text
+   <Your_Steam_Path>\steamapps\common\wallpaper_engine\projects\myprojects\nagomi_koi\
+   ```
+3. Open Wallpaper Engine ➔ your custom wallpaper will appear in the installed list.
+
+#### Method C: Open from File in Wallpaper Engine
+1. In Wallpaper Engine, click **Open Wallpaper** (bottom left) ➔ **Open from file**.
+2. Browse to and select `project.json` or `index.html` from the pre-built directory.
 
 ---
 
@@ -133,6 +152,27 @@ If you have both Wallpaper Engine and Lively Wallpaper installed:
 npm run sync:all
 ```
 *(Or double-click [`Sync-All-Wallpapers.bat`](./Sync-All-Wallpapers.bat))*
+
+---
+
+### Option 4: Web Browser & Cloud Hosting (Vercel / GitHub Pages)
+You can also run Nagomi Koi Pond directly as a standalone web application without installing any wallpaper engine:
+- **Local Browser**: Run `npm run dev` and open `http://localhost:5173`.
+- **Deploy to Vercel**: Connect your GitHub repository to [Vercel](https://vercel.com) with Framework Preset `Vite`, Build Command `npm run build`, and Output Directory `dist`. You'll get a public live URL accessible from any desktop, phone, or tablet!
+
+---
+
+### 🎛️ Customizing Settings in Lively & Wallpaper Engine
+Settings are streamlined into **18 intuitive controls** across logical groups with real-time preview and tooltips:
+- **Weather & Atmosphere**:
+  - `Weather Mode`: Choose *Manual Preset*, *Sync with Device Time*, or *Cycle Automatically*.
+  - `Weather Preset`: Select specific mood (*Sunny*, *Sunset*, *Moonlight*, *Rain*, *Overcast*, *Mist*, *Deep Clear*) when in Manual mode.
+- **Pond & Environment**: Rain ripple density, feeding frequency, boat cruising speed.
+- **Audio**: Ambient river water loop playback toggle and master volume slider.
+- **Clock HUD**: Display mode (*Submerged* / *Floating* / *Off*), 12h/24h format, seconds counter, opacity, and vertical position.
+- **Fauna & Wildlife**: Koi population (10–60), boat visibility toggle, wildlife toggle (frog, dragonflies, butterflies, fireflies).
+- **Mutations (All Default Off)**: 14 individual checkboxes (*Abyssal, Astraeus, Serene, Umbra, Aurora, Midas, Frozen, Electric, Nuclear, Mythical, Rainbow Cluster, Ishmael, Crimson, Bunny*) allowing you to selectively enable only the mythical mutations you wish to see.
+- **Performance**: Frame rate limiter (Native, 60, 45, 30 FPS).
 
 ---
 
